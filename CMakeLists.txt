@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Victor Chavez
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-if(CONFIG_IOLINK)
+if(CONFIG_IOLINKM)
     set(lib_name iolink_master)
     set(OSAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/osal)
     set(IOL_OSAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/iol_osal)
