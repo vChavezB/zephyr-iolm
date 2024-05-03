@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Victor Chavez
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-config CONFIG_IOLINKM
+config CONFIG_IOLINK
     bool "IOLink Master"
     default n
 	select EVENTS
@@ -10,7 +10,7 @@ config CONFIG_IOLINKM
     help
         Enables the IOLink Master Module
         
-if IOLINK
+if CONFIG_IOLINK
 
 module = IOLINK
 module-str = iolink
