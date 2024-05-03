@@ -22,8 +22,8 @@
 #include "iolink_handler.h"
 #include <iolm/zephyr.h>
 
-static const struct device *const spi_dev = NULL;//DEVICE_DT_GET(DT_NODELABEL(quadspi ));
-static const struct device *const irq_port = DEVICE_DT_GET(DT_NODELABEL(gpioe));
+static const struct device *const spi_dev = DEVICE_DT_GET(DT_NODELABEL(spi1));
+static const struct device *const irq_port = DEVICE_DT_GET(DT_NODELABEL(gpio0));
 
 #define IOLINK_HANDLER_THREAD_STACK_SIZE (2048)
 #define IOLINK_HANDLER_THREAD_PRIO       5
