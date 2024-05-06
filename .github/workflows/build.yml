@@ -16,7 +16,7 @@ jobs:
       CMAKE_PREFIX_PATH: /opt/toolchains
       ZEPHYR_VERSION: v3.6-branch
       # Board to use with renode
-      BOARD: native_posix_64
+      BOARD: nrf52833dk_nrf52833
     steps:
       - name: Checkout
         uses: actions/checkout@v4
