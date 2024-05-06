@@ -142,6 +142,7 @@ int main(void)
       .cb_pd                    = NULL,
       .port_cnt                 = NELEMENTS (port_cfgs),
       .port_cfgs                = port_cfgs,
+      /* Not needed, statically set with Kconfig*/
       .master_thread_prio       = 0,
       .master_thread_stack_size = 0,
       .dl_thread_prio           = 0,
@@ -149,7 +150,7 @@ int main(void)
    };
    LOG_INF("Total port cfg %d",iolink_cfg.port_cnt);
 
-   os_usleep (200 * 1000);
+   k_sleep(K_MSEC(200));
 
    iolink_handler_thread = os_thread_create (
       "iolink_handler_thread",

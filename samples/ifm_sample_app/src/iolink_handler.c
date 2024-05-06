@@ -22,6 +22,7 @@
 #include "iolink_dl.h"
 #include "iolink_handler.h"
 #include "iolink_ifm.h"
+#include "iolink_smi.h"
 
 #define EVENT_PD_0           BIT (0)
 #define EVENT_COMLOST_0      BIT (8)
@@ -89,10 +90,9 @@ static void iolink_app_init_port (
    app_port->event_mtx  = os_mutex_create();
    app_port->status_mtx = os_mutex_create();
    app_port->pdout_mtx  = os_mutex_create();
-   iolink_dl_instantiate (
-      port,
-      m_cfg->dl_thread_prio,
-      m_cfg->dl_thread_stack_size);
+   // Note priority and stack are statically defined in Kconfig
+   // see CONFIG_IOLINK_DL_STACK_SIZE, 
+   iolink_dl_instantiate (port,0,0);
 
    app_port->allocated = 1;
    app_port->event     = os_event_create();
@@ -229,6 +229,18 @@ uint8_t get_port_status (iolink_app_port_ctx_t * app_port)
    return 0;
 }
 
+void generic_app (iolink_app_port_ctx_t * app_port)
+{
+   const uint8_t rc =  do_smi_pdin (app_port, 0, 0);
+   if (rc != 0 ) {
+      LOG_ERR("Port [%d] do_smi_pdin() err: %d",app_port->portnumber, rc);
+   } else {
+      LOG_INF("Port [%d] PDIN read OK", app_port->portnumber);
+      LOG_HEXDUMP_INF(app_port->pdin.data, app_port->pdin.data_len, "Data");
+   };
+}
+
+
 static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
 {
    iolink_app_port_status_t * port_status = &app_port->status;
@@ -258,15 +270,16 @@ static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
    {
       switch (port_status->deviceid)
       {
-      case IFM_RFID_DEVICE_ID:
-         ifmrfid_setup (app_port);
-         break;
-      case IFM_HMI_DEVICE_ID:
-         ifmHMI_setup (app_port);
-         break;
+      //case IFM_RFID_DEVICE_ID:
+      //   ifmrfid_setup (app_port);
+      //   break;
+      //case IFM_HMI_DEVICE_ID:
+      //   ifmHMI_setup (app_port);
+      //   break;
       default:
          app_port->type           = UNKNOWN;
          app_port->app_port_state = IOL_STATE_RUNNING;
+         app_port->run_function   = generic_app;
          LOG_WARNING (
             LOG_STATE_ON,
             "%s: Port %u: Unknown iolink device 0x%06x for VID 0x%04x\n",
@@ -342,6 +355,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
 
    m_cfg.cb_arg = &iolink_app_master;
    m_cfg.cb_smi = SMI_cnf_cb;
+   m_cfg.cb_pd  = PD_cb;
    iolink_m_t * master = iolink_m_init (&m_cfg);
 
    if (master == NULL)
@@ -367,7 +381,8 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
 
       if (app_port->allocated == 1)
       {
-         iolink_get_port (iolink_app_master.master, app_port->portnumber);
+         // No effect output is not used
+         //iolink_get_port (iolink_app_master.master, app_port->portnumber);
 
          if (iolink_config_port (app_port, port_mode[i]) != 0)
          {
