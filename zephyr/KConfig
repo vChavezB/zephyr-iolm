@@ -22,9 +22,18 @@ config IOLINK_DL_STACK_SIZE
 	default 2048
 
 
-config IOLINK_PRIO
-	int "IO-Link Master task priority"
+config IOLINK_MASTER_PRIO
+	int "IO-Link Master handler Priority"
+	help
+	  Priority of the IO-Link Master handler task which 
+	  handles events from all the IO-Link ports
+	default 5
+
+config IOLINK_DL_PRIO
+	int "IO-Link DL Layer Priority"
 	default 6
+	help
+	  Priority of the IO-Link DL Layer. Typically set to IOLINK_MASTER_PRIO + 1
 
 config IOLINK_NUM_PORTS
 	int "Number of IO-Link ports"
