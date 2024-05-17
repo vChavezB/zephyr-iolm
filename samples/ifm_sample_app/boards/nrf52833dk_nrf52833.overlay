@@ -1,0 +1,46 @@
+/ {
+
+	iolm_gpios: iolm_gpios {
+		compatible = "gpio-leds";
+		iolm_irq: iolm_irq {
+			status = "okay";
+			gpios = <&gpio0 19 (GPIO_ACTIVE_LOW)>;
+			label = "iolm_irq";
+		};
+		iolm_cs: iolm_cs {
+			status = "okay";
+			gpios = <&gpio1 7 (GPIO_ACTIVE_LOW)>;
+			label = "iolm_cs";
+		};
+	};
+    
+	aliases {
+		iolm-spi= &spi1;
+        iolm-cs = &iolm_cs;
+        iolm-irq = &iolm_irq;
+	};
+
+};
+
+&uart0 {
+	current-speed = <460800>;
+};
+
+&pinctrl {
+
+    spi1_default: spi1_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1,5)>,
+				    <NRF_PSEL(SPIM_MOSI, 1, 6)>,
+    				<NRF_PSEL(SPIM_MISO, 1, 8)>;
+		};
+	};
+	spi1_sleep: spi1_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 5)>,
+	    			<NRF_PSEL(SPIM_MOSI,1, 6)>,
+		    		<NRF_PSEL(SPIM_MISO, 1, 8)>;
+			low-power-enable;
+		};
+	};
+};
