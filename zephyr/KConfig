@@ -29,11 +29,11 @@ config IOLINK_MASTER_PRIO
 	help
 	  Priority of the IO-Link Master handler task which 
 	  handles events from all the IO-Link ports
-	default 5
+	default 2
 
 config IOLINK_DL_PRIO
 	int "IO-Link DL Layer Priority"
-	default 6
+	default 3
 	help
 	  Priority of the IO-Link DL Layer. Typically set to IOLINK_MASTER_PRIO + 1
 
