@@ -39,6 +39,7 @@ typedef struct os_timer
 typedef struct os_mbox
 {
    struct k_mutex mutex;
+   struct k_event evt;
    size_t r;
    size_t w;
    size_t count;

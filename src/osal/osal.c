@@ -4,6 +4,7 @@
 #include <zephyr/kernel.h>
 #include <sys/osal_sys.h>
 #include <stdbool.h>
+#include <osal_log.h>
 
 void * os_malloc (size_t size)
 {
@@ -15,16 +16,16 @@ void os_free (void * ptr)
    free (ptr);
 }
 
-static inline k_timeout_t get_timeout(uint32_t osal_time) {
+static k_timeout_t get_timeout(uint32_t osal_time) {
    if (osal_time == OS_WAIT_FOREVER) {
       return K_FOREVER;
    } else {
-      return K_MSEC(time);
+      return K_MSEC(osal_time);
    }
 }
 
 void os_thread_entry(void *entry, void *arg, void *name) {
-   printk("Thread entry %s\n",name);
+   LOG_INF("Thread entry %s\n",name);
    void (*entry_func)(void * arg) = (void (*)(void * arg))entry;
    entry_func(arg);
    //free(thread);  // TODO do we need to free the thread or iol-stack thread does not exit?
@@ -55,7 +56,7 @@ os_thread_t * os_thread_create (
    if (name != NULL) {
       k_thread_name_set(thread, name);
    }
-   printk("thread create %s, prio %d\n",name,priority);
+   LOG_INF("thread created %s, prio %d",name,priority);
    return thread;
 }
 
@@ -126,27 +127,23 @@ os_event_t * os_event_create (void)
    struct k_event * event = (struct k_event *)malloc (sizeof(struct k_event));
    CC_ASSERT (event != NULL);
    k_event_init(event);
-   printk("os_event_create addr %x\n",event);
+   LOG_INF("os_event_create addr %x\n",event);
    return event;
 }
 
 bool os_event_wait (os_event_t * event, uint32_t mask, uint32_t * value, uint32_t time)
 {
-  printk("[%d] os_event_wait addr %x, t %d\n",k_uptime_get_32(),event, time);
   int evts =  k_event_wait(event, mask,false, get_timeout(time));
-  printk("rc: %d\n",evts);
   if (evts <= 0 ) {
-     printk("timeout\n");
      return true;
   }
-  printk("[%d] os_event_wait_end %x\n",k_uptime_get_32(),event);
   *value = evts;
   return false;
 }
 
 void os_event_set (os_event_t * event, uint32_t value)
 {
-   k_event_set(event, value);
+   k_event_post(event, value);
 }
 
 void os_event_clr (os_event_t * event, uint32_t value)
@@ -169,6 +166,7 @@ os_mbox_t * os_mbox_create (size_t size)
       return NULL;
    }
    k_mutex_init(&mbox->mutex);
+   k_event_init(&mbox->evt);
 
    mbox->r     = 0;
    mbox->w     = 0;
@@ -178,47 +176,59 @@ os_mbox_t * os_mbox_create (size_t size)
 
 }
 
+size_t get_mbox_cnt(os_mbox_t * mbox){
+   uint32_t mbox_cnt;
+   k_mutex_lock (&mbox->mutex, K_FOREVER);
+   mbox_cnt = mbox->count;
+   k_mutex_unlock (&mbox->mutex);
+   return mbox_cnt;
+}
+
 bool os_mbox_fetch (os_mbox_t * mbox, void ** msg, uint32_t time)
 {
    int error     = 0;
-   //printk("os_mbox_fetch %x\n",mbox);
-   while (mbox->count == 0)
-   {
-      error = k_mutex_lock (&mbox->mutex, get_timeout(time));
-      if (error) {
-         //printk("nok\n");
+   size_t mbox_cnt = get_mbox_cnt(mbox);
+
+   if (mbox_cnt == 0) {
+      int evts =  k_event_wait(&mbox->evt, 0x01, false, get_timeout(time));
+      if (evts <= 0 ) {
          return true;
+      } else {
+         k_event_clear(&mbox->evt, 0x01);
       }
    }
+   k_mutex_lock (&mbox->mutex, K_FOREVER);
    *msg = mbox->msg[mbox->r++];
    if (mbox->r == mbox->size)
       mbox->r = 0;
 
    mbox->count--;
-   //printk("ok\n");
+   k_event_set(&mbox->evt, 0x02);
+   k_mutex_unlock (&mbox->mutex);
    return false;
 }
 
 bool os_mbox_post (os_mbox_t * mbox, void * msg, uint32_t time)
 {
-   //printk("os_mbox_post %x\n",mbox);
    int error = 0;
-   while (mbox->count == mbox->size)
-   {
-      error = k_mutex_lock (&mbox->mutex, get_timeout(time));
-      if (error) {
-         //printk("nok\n");
+   size_t mbox_cnt = get_mbox_cnt(mbox);
+
+   if (mbox_cnt == mbox->size) {
+      int evts =  k_event_wait(&mbox->evt, 0x02, false, get_timeout(time));
+      if (evts <= 0 ) {
          return true;
+      } else {
+         k_event_clear(&mbox->evt, 0x02);
       }
    }
-
-
+   k_mutex_lock (&mbox->mutex, K_FOREVER);
    mbox->msg[mbox->w++] = msg;
    if (mbox->w == mbox->size)
       mbox->w = 0;
 
    mbox->count++;
-   //printk("ok\n");
+   k_event_set(&mbox->evt, 0x01);
+   k_mutex_unlock (&mbox->mutex);
    return false;
 }
 
@@ -229,8 +239,10 @@ void os_mbox_destroy (os_mbox_t * mbox)
 
 static void timer_internal_cb(struct k_timer * timer)
 {
-   os_timer_t * os_timer = (os_timer_t *)timer;
-   os_timer->fn(os_timer, os_timer->arg);
+   os_timer_t * os_timer = (os_timer_t *)timer->user_data;
+   if(os_timer->fn) {
+      os_timer->fn(os_timer, os_timer->arg);
+   }
 }
 
 os_timer_t * os_timer_create (
@@ -249,6 +261,7 @@ os_timer_t * os_timer_create (
       return NULL;
    }
    k_timer_init(handle, timer_internal_cb, NULL);
+   handle->user_data = os_timer;
    os_timer->one_shot = oneshot;
    os_timer->handle = handle;
    os_timer->fn = fn;
