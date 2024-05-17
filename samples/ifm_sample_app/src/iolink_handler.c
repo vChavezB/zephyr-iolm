@@ -59,7 +59,7 @@ static uint8_t verify_smi_masterident (
 {
    arg_block_void_t arg_block_void;
 
-   bzero (&arg_block_void, sizeof (arg_block_void_t));
+   memset (&arg_block_void, 0, sizeof (arg_block_void_t));
    arg_block_void.arg_block.id = IOLINK_ARG_BLOCK_ID_VOID_BLOCK;
    iolink_error_t err = SMI_MasterIdentification_req (
       app_port->portnumber,
@@ -156,7 +156,7 @@ static uint8_t iolink_config_port_dido (iolink_app_port_ctx_t * app_port, bool d
 {
    arg_block_portconfiglist_t port_cfg;
 
-   bzero (&port_cfg, sizeof (arg_block_portconfiglist_t));
+   memset (&port_cfg, 0, sizeof (arg_block_portconfiglist_t));
 
    iolink_common_config (
       &port_cfg,
@@ -210,7 +210,7 @@ uint8_t get_port_status (iolink_app_port_ctx_t * app_port)
 {
    arg_block_void_t arg_block_void;
 
-   bzero (&arg_block_void, sizeof (arg_block_void_t));
+   memset (&arg_block_void, 0, sizeof (arg_block_void_t));
    arg_block_void.arg_block.id = IOLINK_ARG_BLOCK_ID_VOID_BLOCK;
 
    iolink_error_t err = SMI_PortStatus_req (
@@ -266,7 +266,7 @@ static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
       return 1;
    }
 
-   if (port_status->vendorid == IFM_VENDOR_ID)
+   //if (port_status->vendorid == IFM_VENDOR_ID)
    {
       switch (port_status->deviceid)
       {
@@ -290,6 +290,7 @@ static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
          break;
       }
    }
+   /*
    else
    {
       app_port->type = UNKNOWN;
@@ -302,6 +303,7 @@ static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
          port_status->vendorid,
          (int)port_status->deviceid);
    }
+   */
 
    LOG_INFO (LOG_STATE_ON, "%s: Port %u: Start done!\n", __func__, portnumber);
    os_mutex_unlock (app_port->status_mtx);
@@ -348,14 +350,14 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
             os_timer_create (1000 * 1000, iolink_retry_estcom, (void *)i, true);
       }
    }
-
-   bzero (port_mode, sizeof (port_mode));
-   bzero (&iolink_app_master, sizeof (iolink_app_master));
+   memset (port_mode, 0, sizeof (port_mode));
+   memset (&iolink_app_master, 0, sizeof (iolink_app_master));
    iolink_app_master.app_event = app_event;
 
    m_cfg.cb_arg = &iolink_app_master;
    m_cfg.cb_smi = SMI_cnf_cb;
    m_cfg.cb_pd  = PD_cb;
+
    iolink_m_t * master = iolink_m_init (&m_cfg);
 
    if (master == NULL)
@@ -398,9 +400,10 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
    while (true)
    {
       uint32_t event_value;
-      printk("loop\n");
       if (!os_event_wait (iolink_app_master.app_event, 0xFFFFFFFF, &event_value, 1000))
       {
+         if (event_value != 1)
+         LOG_INF("IOLink Handler Event %x", event_value);
          os_event_clr (iolink_app_master.app_event, event_value);
 
          for (i = 0; i < m_cfg.port_cnt; i++)
@@ -514,25 +517,26 @@ static void handle_smi_portevent (
    uint8_t portnumber                   = app_port->portnumber;
    iolink_app_master_ctx_t * app_master = app_port->app_master;
    uint8_t port_index                   = portnumber - 1;
-
+   LOG_INF("SMI event");
+   LOG_INF("Port event %d : %x",event->event_qualifier,event->event_code);
    if (
       ((app_port->type == GOLDEN) || (app_port->type == UNKNOWN)) &&
       event->event_code != IOLINK_EVENTCODE_NO_DEV)
    {
       uint8_t event_index;
-
-      os_mutex_lock (app_port->event_mtx);
-      event_index = app_port->events.count++;
-      CC_ASSERT (event_index < PORT_EVENT_COUNT);
-      app_port->events.diag_entry[event_index].event_qualifier =
-         event->event_qualifier;
-      app_port->events.diag_entry[event_index].event_code = event->event_code;
-      os_mutex_unlock (app_port->event_mtx);
+      
+      //os_mutex_lock (app_port->event_mtx);
+     // event_index = app_port->events.count++;
+      //CC_ASSERT (event_index < PORT_EVENT_COUNT);
+      //app_port->events.diag_entry[event_index].event_qualifier =
+      //   event->event_qualifier;
+      //app_port->events.diag_entry[event_index].event_code = event->event_code;
+      //os_mutex_unlock (app_port->event_mtx);
    }
 
    if (event->event_code != IOLINK_EVENTCODE_NO_DEV)
    {
-      LOG_DEBUG (
+      LOG_INFO (
          LOG_STATE_ON,
          "%s (%d): type = %d, event_code = 0x%04X, count = %d\n",
          __func__,
@@ -545,6 +549,7 @@ static void handle_smi_portevent (
    switch (event->event_code)
    {
    case IOLINK_EVENTCODE_PORT_STATUS_CHANGE:
+      LOG_INF("Port status changed");
       /* Port status changed - Use SMI_PortStatus() for details */
       os_event_set (app_master->app_event, (EVENT_PORTE_0 << port_index));
       break;
