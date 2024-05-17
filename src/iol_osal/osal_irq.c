@@ -25,11 +25,12 @@ int _iolink_setup_int_zephyr (const struct device * port, gpio_pin_t pin, isr_fu
     if (!device_is_ready(port)) {
         return -ENODEV;
     }
-    gpio_pin_configure(port, pin, GPIO_ACTIVE_LOW | GPIO_INPUT );
+    int rc = gpio_pin_configure(port, pin, GPIO_ACTIVE_LOW | GPIO_INPUT | GPIO_PULL_UP );
     struct gpio_cb_data * cb_data = (struct gpio_cb_data *)malloc(sizeof(struct gpio_cb_data));
     cb_data->arg = irq_arg;
     cb_data->isr_func = isr_func;
     gpio_init_callback(&cb_data->zephyr_data, gpio_cb, BIT(pin));
     gpio_add_callback(port, &cb_data->zephyr_data);
-    return 0;
+    rc =  gpio_pin_interrupt_configure(port,pin,GPIO_INT_EDGE_TO_ACTIVE);
+    return rc == 0;
 }
