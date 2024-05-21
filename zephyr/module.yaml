@@ -4,4 +4,4 @@
 name: iolink
 build:
   cmake: .
-  kconfig: zephyr/KConfig
+  kconfig: zephyr/Kconfig
