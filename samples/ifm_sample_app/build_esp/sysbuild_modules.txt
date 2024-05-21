@@ -1,1 +1,0 @@
-"mcuboot":"C:/Users/vc9917e/zephyr_latest/bootloader/mcuboot":"C:/Users/vc9917e/zephyr_latest/bootloader/mcuboot/boot/zephyr/sysbuild"
