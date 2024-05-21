@@ -1,0 +1,46 @@
+# Available runners configured by board.cmake.
+runners:
+- esp32
+- openocd
+- esp32
+
+# Default flash runner if --runner is not given.
+flash-runner: esp32
+
+# Default debug runner if --runner is not given.
+debug-runner: openocd
+
+# Common runner configuration values.
+config:
+  board_dir: C:/Users/vc9917e/zephyr_latest/zephyr/boards/espressif/esp32_devkitc_wrover
+  # Build outputs:
+  elf_file: zephyr.elf
+  bin_file: zephyr.bin
+  # Host tools:
+  gdb: C:/opt/zephyr/zephyr-sdk-0.16.5-1/xtensa-espressif_esp32_zephyr-elf/bin/xtensa-espressif_esp32_zephyr-elf-gdb.exe
+
+# Runner specific arguments
+args:
+  esp32:
+    - --esp-idf-path=C:/Users/vc9917e/zephyr_latest/modules/hal/espressif
+    - --esp-app-address=0x1000
+  openocd:
+    - --cmd-load
+    - flash write_image erase
+    - --cmd-verify
+    - verify_image
+    - --no-init
+    - --no-halt
+    - --no-targets
+    - --no-load
+    - --gdb-init
+    - set remote hardware-watchpoint-limit 2
+    - --gdb-init
+    - flushregs
+    - --gdb-init
+    - mon reset halt
+    - --gdb-init
+    - thb main
+  esp32:
+    - --esp-idf-path=C:/Users/vc9917e/zephyr_latest/modules/hal/espressif
+    - --esp-app-address=0x1000

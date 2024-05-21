@@ -179,7 +179,7 @@ uint8_t do_smi_pdout (
    return (err == IOLINK_ERROR_NONE) ? 0 : 1;
 }
 
-int8_t do_smi_pdin (iolink_app_port_ctx_t * app_port, bool * valid, uint8_t * pdin)
+int8_t do_smi_pdin (iolink_app_port_ctx_t * app_port, bool * valid)
 {
    arg_block_void_t arg_block_void;
    int8_t len = 0;
@@ -187,28 +187,11 @@ int8_t do_smi_pdin (iolink_app_port_ctx_t * app_port, bool * valid, uint8_t * pd
    memset (&arg_block_void, 0, sizeof (arg_block_void_t));
    arg_block_void.arg_block.id = IOLINK_ARG_BLOCK_ID_VOID_BLOCK;
 
-   if (
-      SMI_PDIn_req (
+   SMI_PDIn_req (
          app_port->portnumber,
          IOLINK_ARG_BLOCK_ID_PD_IN,
          sizeof (arg_block_void_t),
-         (arg_block_t *)&arg_block_void) == IOLINK_ERROR_NONE)
-   {
-      len = app_port->pdin.data_len;
-
-      memcpy (pdin, app_port->pdin.data, len);
-
-      if (valid != NULL)
-      {
-         *valid = !(app_port->pdin.pqi & IOLINK_PORT_QUALIFIER_INFO_PQ_INVALID);
-
-         iolink_port_t * port =
-            iolink_get_port (iolink_app_master.master, app_port->portnumber);
-         iolink_get_dl_ctx (port)->pd_handler.pd_valid = *valid;
-      }
-   }
-
-   return len;
+         (arg_block_t *)&arg_block_void) == IOLINK_ERROR_NONE? 0:-1;
 }
 
 uint8_t do_smi_pdinout (iolink_app_port_ctx_t * app_port)

@@ -8,7 +8,6 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(ifm_sample_app)
 
 target_sources(app PRIVATE src/iolink_smi.c
-                            src/iolink_ifm.c
                             src/iolink_handler.c
                             src/iol_master_sample_app.c
 )

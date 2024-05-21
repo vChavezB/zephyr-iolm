@@ -26,7 +26,7 @@ static const struct device *const spi_dev = DEVICE_DT_GET(DT_ALIAS(iolm_spi));
 static const struct gpio_dt_spec irq_dev = GPIO_DT_SPEC_GET(DT_ALIAS(iolm_irq), gpios);
 
 #define IOLINK_HANDLER_THREAD_STACK_SIZE (8192)
-#define IOLINK_HANDLER_THREAD_PRIO       1
+#define IOLINK_HANDLER_THREAD_PRIO       4
 static K_THREAD_STACK_DEFINE(iolm_handler_stack, IOLINK_HANDLER_THREAD_STACK_SIZE); 
 
 

@@ -40,7 +40,7 @@ uint8_t do_smi_pdout (
    uint8_t len,
    const uint8_t * data);
 
-int8_t do_smi_pdin (iolink_app_port_ctx_t * app_port, bool * valid, uint8_t * pdin);
+int8_t do_smi_pdin (iolink_app_port_ctx_t * app_port, bool * valid);
 
 uint8_t do_smi_pdinout (iolink_app_port_ctx_t * app_port);
 

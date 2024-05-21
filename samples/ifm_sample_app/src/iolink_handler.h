@@ -42,6 +42,7 @@ typedef enum
    SMI_PORTSTATUS_CNF    = 0x08,
    SMI_MASTERIDENT_CNF   = 0x10,
    SMI_PARSERV_TO_DS_CNF = 0x20,
+   SMI_PDIN_CNF = 0x40
 } iolink_app_port_event_t;
 
 typedef enum
@@ -80,6 +81,7 @@ typedef struct iolink_app_port_ctx
    iolink_app_port_status_t status;
    os_mutex_t * status_mtx;
    iolink_smi_errortypes_t errortype;
+   uint32_t last_pdin_print;
 
    struct
    {

@@ -21,7 +21,6 @@
 #include "iolink_main.h"
 #include "iolink_dl.h"
 #include "iolink_handler.h"
-#include "iolink_ifm.h"
 #include "iolink_smi.h"
 
 #define EVENT_PD_0           BIT (0)
@@ -231,13 +230,11 @@ uint8_t get_port_status (iolink_app_port_ctx_t * app_port)
 
 void generic_app (iolink_app_port_ctx_t * app_port)
 {
-   const uint8_t rc =  do_smi_pdin (app_port, 0, 0);
+   bool valid;
+   const uint8_t rc =  do_smi_pdin (app_port, &valid);
    if (rc != 0 ) {
       LOG_ERR("Port [%d] do_smi_pdin() err: %d",app_port->portnumber, rc);
-   } else {
-      LOG_INF("Port [%d] PDIN read OK", app_port->portnumber);
-      LOG_HEXDUMP_INF(app_port->pdin.data, app_port->pdin.data_len, "Data");
-   };
+   }
 }
 
 
@@ -270,19 +267,13 @@ static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
    {
       switch (port_status->deviceid)
       {
-      //case IFM_RFID_DEVICE_ID:
-      //   ifmrfid_setup (app_port);
-      //   break;
-      //case IFM_HMI_DEVICE_ID:
-      //   ifmHMI_setup (app_port);
-      //   break;
       default:
          app_port->type           = UNKNOWN;
          app_port->app_port_state = IOL_STATE_RUNNING;
          app_port->run_function   = generic_app;
-         LOG_WARNING (
+         LOG_INFO (
             LOG_STATE_ON,
-            "%s: Port %u: Unknown iolink device 0x%06x for VID 0x%04x\n",
+            "%s: Port %u: iolink device 0x%06x for VID 0x%04x\n",
             __func__,
             portnumber,
             (int)port_status->deviceid,
@@ -395,6 +386,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
                i + 1);
          }
       }
+      app_port->last_pdin_print = 0;
    }
    LOG_INF("iolink_handler started");
    while (true)
@@ -402,9 +394,8 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
       uint32_t event_value;
       if (!os_event_wait (iolink_app_master.app_event, 0xFFFFFFFF, &event_value, 1000))
       {
-         if (event_value != 1)
-         LOG_INF("IOLink Handler Event %x", event_value);
          os_event_clr (iolink_app_master.app_event, event_value);
+         const uint32_t current_time = k_uptime_get_32();
 
          for (i = 0; i < m_cfg.port_cnt; i++)
          {
@@ -418,6 +409,18 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
                   {
                      app_port->run_function (app_port);
                   }
+               }
+            }
+
+            if (((SMI_PDIN_CNF << i) & event_value) != 0)
+            {
+               if (current_time - app_port->last_pdin_print > 1000) {
+                  app_port->last_pdin_print = current_time;
+                  uint8_t pdin_data[64];
+                  for (size_t i = 0; i < app_port->pdin.data_len; i++) {
+                     sprintf(pdin_data + (i * 2), "%02x", app_port->pdin.data[i]);
+                  }
+                  LOG_INF("Port [%d] PDIN Cnf %s", app_port->portnumber,pdin_data);
                }
             }
 
@@ -689,12 +692,13 @@ static void SMI_cnf_cb (
       app_port->param_read.data_len = arg_block_len - sizeof (arg_block_od_t);
       os_event_set (app_port->event, SMI_READ_CNF);
       break;
-   case IOLINK_ARG_BLOCK_ID_PD_IN:;
+   case IOLINK_ARG_BLOCK_ID_PD_IN:
       /* SMI_PDIn_cnf */
       arg_block_pdin_t * arg_block_pdin = (arg_block_pdin_t *)arg_block;
       memcpy (app_port->pdin.data, arg_block_pdin->data, arg_block_pdin->h.len);
       app_port->pdin.data_len = arg_block_pdin->h.len;
       app_port->pdin.pqi      = arg_block_pdin->h.port_qualifier_info;
+      os_event_set (iolink_app_master.app_event, (SMI_PDIN_CNF << portnumber-1));
       break;
    case IOLINK_ARG_BLOCK_ID_PD_IN_OUT:
       /* SMI_PDInOut_cnf */
