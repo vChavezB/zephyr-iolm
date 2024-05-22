@@ -420,7 +420,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
                   for (size_t i = 0; i < app_port->pdin.data_len; i++) {
                      sprintf(pdin_data + (i * 2), "%02x", app_port->pdin.data[i]);
                   }
-                  LOG_INF("Port [%d] PDIN Cnf %s", app_port->portnumber,pdin_data);
+                  //LOG_INF("Port [%d] PDIN Cnf %s", app_port->portnumber,pdin_data);
                }
             }
 

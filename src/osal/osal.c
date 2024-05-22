@@ -1,5 +1,7 @@
+/*  Copyright (c) 2024 Victor Chavez
+    SPDX-License-Identifier: GPL-3.0-or-later
+*/
 #include <osal.h>
-
 #include <stdlib.h>
 #include <zephyr/kernel.h>
 #include <sys/osal_sys.h>

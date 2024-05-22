@@ -97,6 +97,7 @@ static const iolink_14819_cfg_t iol_14819_0_cfg = {
 };
 
 #ifdef IOLINK_APP_CHIP1_SPI
+
 static const iolink_14819_cfg_t iol_14819_1_cfg = {
       .chip_address   = IOLINK_APP_CHIP1_ADDRESS,
       .spi_slave_name = IOLINK_APP_CHIP1_SPI,
@@ -116,7 +117,7 @@ iolink_port_cfg_t port_cfgs[] = {
       },
       {
          .name = "/iolink0/1",
-         .mode = &mode_ch[1],
+         .mode = &mode_ch[0],
          .arg  = (void*)1,
       },
 #ifdef IOLINK_APP_CHIP1_SPI
