@@ -9,7 +9,7 @@
 		};
 		iolm_cs: iolm_cs {
 			status = "okay";
-			gpios = <&gpio0 4 (GPIO_ACTIVE_LOW)>;
+			gpios = <&gpio1 9 (GPIO_ACTIVE_LOW)>;
 			label = "iolm_cs";
 		};
 	};

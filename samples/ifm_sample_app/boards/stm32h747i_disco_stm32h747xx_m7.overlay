@@ -1,3 +1,0 @@
-&gpioe {
-    status="okay";
-};
