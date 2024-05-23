@@ -26,7 +26,7 @@ static const struct device *const spi_dev = DEVICE_DT_GET(DT_ALIAS(iolm_spi));
 static const struct gpio_dt_spec irq_dev = GPIO_DT_SPEC_GET(DT_ALIAS(iolm_irq), gpios);
 
 #define IOLINK_HANDLER_THREAD_STACK_SIZE (8192)
-#define IOLINK_HANDLER_THREAD_PRIO       4
+#define IOLINK_HANDLER_THREAD_PRIO       5
 static K_THREAD_STACK_DEFINE(iolm_handler_stack, IOLINK_HANDLER_THREAD_STACK_SIZE); 
 
 
@@ -86,13 +86,25 @@ static iolink_m_cfg_t iolink_cfg = {
 
 os_thread_t * iolink_handler_thread;
 iolink_hw_drv_t * hw[2];
+#define CURR_100MA 0x00
+#define CURR_200MA 0x01
+#define CURR_300MA 0x02
+#define CURR_500MA 0x03
+#define DRVRCURRLIM_CLDIS BIT(5)
+
+#define CURR_OFF 0x06
+
+#define CL_CONF(x)  ((x) << CURR_OFF)
 static const iolink_14819_cfg_t iol_14819_0_cfg = {
       .chip_address   = IOLINK_APP_CHIP0_ADDRESS,
       .spi_slave_name = spi_dev,
       .CQCfgA         = MAX14819_CQCFG_DRVDIS | MAX14819_CQCFG_SINKSEL(0x2),
+      .CQCfgB         = MAX14819_CQCFG_DRVDIS | MAX14819_CQCFG_SINKSEL(0x2),
       .LPCnfgA        = MAX14819_LPCNFG_LPEN,
+      .LPCnfgB        = MAX14819_LPCNFG_LPEN,
       .IOStCfgA       = MAX14819_IOSTCFG_DICSINK | MAX14819_IOSTCFG_DIEC3TH,
-      .DrvCurrLim     = 0x00,
+      .IOStCfgB       = MAX14819_IOSTCFG_DICSINK | MAX14819_IOSTCFG_DIEC3TH,
+      .DrvCurrLim     = CL_CONF(CURR_300MA),
       .Clock          = MAX14819_CLOCK_XTALEN | MAX14819_CLOCK_TXTXENDIS,
 };
 
@@ -142,6 +154,9 @@ int main(void)
 
    LOG_INF("Starting app");
    hw[0] = main_14819_init("/iolink0", &iol_14819_0_cfg, irq_dev.port, irq_dev.pin);
+   if (hw[0] == NULL) {
+      return 0;
+   }
 #ifdef IOLINK_APP_CHIP1_SPI
    hw[1] = main_14819_init("/iolink1", &iol_14819_1_cfg, irq_dev.port, irq_dev.pin);
 #endif

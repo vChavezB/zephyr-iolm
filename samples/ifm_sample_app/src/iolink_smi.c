@@ -187,7 +187,7 @@ int8_t do_smi_pdin (iolink_app_port_ctx_t * app_port, bool * valid)
    memset (&arg_block_void, 0, sizeof (arg_block_void_t));
    arg_block_void.arg_block.id = IOLINK_ARG_BLOCK_ID_VOID_BLOCK;
 
-   SMI_PDIn_req (
+   return SMI_PDIn_req (
          app_port->portnumber,
          IOLINK_ARG_BLOCK_ID_PD_IN,
          sizeof (arg_block_void_t),

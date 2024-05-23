@@ -241,7 +241,7 @@ void generic_app (iolink_app_port_ctx_t * app_port)
 static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
 {
    iolink_app_port_status_t * port_status = &app_port->status;
-   uint8_t portnumber                     = app_port->portnumber;
+   uint8_t portnumber                     = app_port->portnumber-1;
 
    if (get_port_status (app_port) != 0)
    {
@@ -420,7 +420,7 @@ void iolink_handler (iolink_m_cfg_t m_cfg)
                   for (size_t i = 0; i < app_port->pdin.data_len; i++) {
                      sprintf(pdin_data + (i * 2), "%02x", app_port->pdin.data[i]);
                   }
-                  //LOG_INF("Port [%d] PDIN Cnf %s", app_port->portnumber,pdin_data);
+                  LOG_INF("Port [%d] PDIN Cnf %s", app_port->portnumber,pdin_data);
                }
             }
 
@@ -520,8 +520,8 @@ static void handle_smi_portevent (
    uint8_t portnumber                   = app_port->portnumber;
    iolink_app_master_ctx_t * app_master = app_port->app_master;
    uint8_t port_index                   = portnumber - 1;
-   LOG_INF("SMI event");
-   LOG_INF("Port event %d : %x",event->event_qualifier,event->event_code);
+   //LOG_INF("SMI event");
+   //LOG_INF("Port [%d] event %d : %x",port_index,event->event_qualifier,event->event_code);
    if (
       ((app_port->type == GOLDEN) || (app_port->type == UNKNOWN)) &&
       event->event_code != IOLINK_EVENTCODE_NO_DEV)

@@ -4,12 +4,12 @@
 		compatible = "gpio-leds";
 		iolm_irq: iolm_irq {
 			status = "okay";
-			gpios = <&gpio0 26 (GPIO_ACTIVE_LOW)>;
+			gpios = <&gpio0 18 (GPIO_ACTIVE_LOW)>;
 			label = "iolm_irq";
 		};
 		iolm_cs: iolm_cs {
 			status = "okay";
-			gpios = <&gpio0 27 (GPIO_ACTIVE_LOW)>;
+			gpios = <&gpio0 19 (GPIO_ACTIVE_LOW)>;
 			label = "iolm_cs";
 		};
 	};
