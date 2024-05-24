@@ -17,6 +17,9 @@ jobs:
       ZEPHYR_VERSION: v3.6-branch
       # Board to use with renode
       BOARD: nrf52833dk_nrf52833
+    strategy:
+      matrix:
+        board: ["esp32","nrf52833dk_nrf52833"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,8 +30,7 @@ jobs:
           cd /tmp/
           west init
           west update -o=--depth=1 -n
-
       - name: Build PoC
         working-directory: /tmp/
         run: |
-          west build $GITHUB_WORKSPACE/samples/ifm_sample_app -b $BOARD --build-dir $GITHUB_WORKSPACE/build
+          west build $GITHUB_WORKSPACE/samples/demo -b ${{ matrix.board }} --build-dir $GITHUB_WORKSPACE/build
