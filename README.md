@@ -36,8 +36,9 @@ This happens as it seems that the OD Handler for the event state machine gets st
 
 ### TODOS
 
-- Friendly API to initialize stack 
-- Documentation (Usage, Caveats)
+- Friendly API to initialize stack.
+- API to use SMI in a more intuitive manner.
+- Documentation (Usage, Caveats).
 
 
 
