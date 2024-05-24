@@ -1,14 +1,10 @@
-# Copyright (c) 2024, Victor Chavez
-# SPDX-License-Identifier: GPL-3.0-or-later
-
-name: Build
+name: Build Demo
 
 on:
   push:
   pull_request:
 
 jobs:
-
   build:
     runs-on: ubuntu-22.04
     container: ghcr.io/zephyrproject-rtos/ci:v0.26.2
@@ -19,18 +15,34 @@ jobs:
       BOARD: nrf52833dk_nrf52833
     strategy:
       matrix:
-        board: ["esp32","nrf52833dk_nrf52833"]
+        board: ["esp32", "nrf52833dk_nrf52833"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: true
+
+      # Cache the west workspace
+      - name: Cache west workspace
+        id: cache-west
+        uses: actions/cache@v3
+        with:
+          path: /tmp/west
+          key: ${{ runner.os }}-west-${{ hashFiles('**/west.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-west-
+
+      # Only run initialization if the cache was not restored
       - name: Initialize
+        if: steps.cache-west.outputs.cache-hit != 'true'
         run: |
-          cd /tmp/
+          mkdir -p /tmp/west
+          cd /tmp/west
           west init
           west update -o=--depth=1 -n
+
+      # Matrix-specific build step
       - name: Build PoC
-        working-directory: /tmp/
+        working-directory: /tmp/west
         run: |
           west build $GITHUB_WORKSPACE/samples/demo -b ${{ matrix.board }} --build-dir $GITHUB_WORKSPACE/build
