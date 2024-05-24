@@ -28,14 +28,13 @@ if(CONFIG_IOLINK)
                             ${STACK_SRC}/iolink_pde.c
                             ${STACK_SRC}/iolink_pl.c
                             ${STACK_SRC}/iolink_sm.c
-                            src/iol_osal/osal_spi.c
-                            src/iol_osal/osal_irq.c
                             src/osal/osal.c
-                            src/osal/osal_log.c)
+                            src/osal/osal_log.c
+                            src/transciever.c)
     
     #zephyr_library_sources_ifdef(CONFIG_XX xx)
     #target_compile_definitions(${lib_name} PUBLIC MY_DEF="123")
-    #target_include_directories(${lib_name} PRIVATE lib/etl/include)
+    target_include_directories(${lib_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dts/bindingS/iolm)
     target_compile_options(${lib_name} PRIVATE -Wfatal-errors)
 endif()
     

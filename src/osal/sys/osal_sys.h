@@ -25,10 +25,11 @@ typedef struct k_mutex os_mutex_t;
 typedef struct k_sem os_sem_t;
 typedef struct k_event os_event_t;
 typedef uint32_t os_tick_t;
+#define MAX_MAILBOX_MSGS 50
 
 typedef struct os_timer
 {
-   struct k_timer * handle;
+   struct k_timer handle;
    void(*fn) (struct os_timer *, void * arg);
    void * arg;
    uint32_t us;
@@ -44,7 +45,7 @@ typedef struct os_mbox
    size_t w;
    size_t count;
    size_t size;
-   void * msg[];
+   void * msg[MAX_MAILBOX_MSGS];
 } os_mbox_t;
 
 #ifdef __cplusplus

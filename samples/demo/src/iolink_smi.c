@@ -12,7 +12,9 @@
  * license. See the file LICENSE.md distributed with this software for
  * full license information.
  ********************************************************************/
-
+/* Copyright (c) 2024 Victor Chavez
+   SPDX-License-Identifier: GPL-3.0-or-later
+*/
 #include <string.h>
 #include "osal.h"
 #include "osal_log.h"

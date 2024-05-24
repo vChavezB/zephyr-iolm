@@ -12,6 +12,9 @@
  * license. See the file LICENSE.md distributed with this software for
  * full license information.
  ********************************************************************/
+/* Copyright (c) 2024 Victor Chavez
+   SPDX-License-Identifier: GPL-3.0-or-later
+*/
 #include <strings.h>
 #include <stdio.h>
 #include <string.h>
@@ -263,39 +266,21 @@ static uint8_t iolink_start_port (iolink_app_port_ctx_t * app_port)
       return 1;
    }
 
-   //if (port_status->vendorid == IFM_VENDOR_ID)
-   {
-      switch (port_status->deviceid)
-      {
-      default:
-         app_port->type           = UNKNOWN;
-         app_port->app_port_state = IOL_STATE_RUNNING;
-         app_port->run_function   = generic_app;
-         LOG_INFO (
-            LOG_STATE_ON,
-            "%s: Port %u: iolink device 0x%06x for VID 0x%04x\n",
-            __func__,
-            portnumber,
-            (int)port_status->deviceid,
-            port_status->vendorid);
-         break;
-      }
-   }
-   /*
-   else
-   {
-      app_port->type = UNKNOWN;
-      LOG_WARNING (
+
+   switch (port_status->deviceid) {
+   default:
+      app_port->type           = UNKNOWN;
+      app_port->app_port_state = IOL_STATE_RUNNING;
+      app_port->run_function   = generic_app;
+      LOG_INFO (
          LOG_STATE_ON,
-         "%s: Port %u: Unknown device: Vendor ID = 0x%04X, Device ID = "
-         "0x%06X\n",
+         "%s: Port %u: iolink device 0x%06x for VID 0x%04x\n",
          __func__,
          portnumber,
-         port_status->vendorid,
-         (int)port_status->deviceid);
+         (int)port_status->deviceid,
+         port_status->vendorid);
+      break;
    }
-   */
-
    LOG_INFO (LOG_STATE_ON, "%s: Port %u: Start done!\n", __func__, portnumber);
    os_mutex_unlock (app_port->status_mtx);
 

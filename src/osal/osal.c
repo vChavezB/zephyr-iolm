@@ -8,15 +8,28 @@
 #include <stdbool.h>
 #include <osal_log.h>
 
-void * os_malloc (size_t size)
-{
-   return malloc (size);
-}
+#define TIMERS_PER_PORT 3
+#define MUTEX_PER_PORT 6
+#define EVT_PER_PORT 2
+#define THREAD_PER_PORT 1
+#define MBOX_PER_PORT 2
+#define TOTAL_TIMERS (TIMERS_PER_PORT * CONFIG_IOLINK_NUM_PORTS)
+#define TOTAL_MUTEX (MUTEX_PER_PORT*CONFIG_IOLINK_NUM_PORTS)
+#define TOTAL_EVT (EVT_PER_PORT*CONFIG_IOLINK_NUM_PORTS+20)
+#define TOTAL_THREADS (CONFIG_IOLINK_NUM_PORTS*THREAD_PER_PORT+5)
+#define TOTAL_MBOX (MBOX_PER_PORT*CONFIG_IOLINK_NUM_PORTS)
 
-void os_free (void * ptr)
-{
-   free (ptr);
-}
+static uint8_t timer_cnt;
+static uint8_t mutex_cnt;
+static uint8_t evt_cnt;
+static uint8_t thread_cnt;
+static uint8_t mbox_cnt;
+os_timer_t timer_inst[TOTAL_TIMERS];
+struct k_mutex mutex_inst[TOTAL_MUTEX];
+struct k_event evt_inst[TOTAL_EVT];
+struct k_thread thread_inst[TOTAL_THREADS];
+os_mbox_t mbox_inst[TOTAL_MBOX];
+
 
 static k_timeout_t get_timeout(uint32_t osal_time) {
    if (osal_time == OS_WAIT_FOREVER) {
@@ -27,10 +40,8 @@ static k_timeout_t get_timeout(uint32_t osal_time) {
 }
 
 void os_thread_entry(void *entry, void *arg, void *name) {
-   LOG_INF("Thread entry %s\n",name);
    void (*entry_func)(void * arg) = (void (*)(void * arg))entry;
    entry_func(arg);
-   //free(thread);  // TODO do we need to free the thread or iol-stack thread does not exit?
 }
 
 os_thread_t * os_thread_create (
@@ -41,10 +52,10 @@ os_thread_t * os_thread_create (
    void (*entry) (void * arg),
    void * arg)
 {
-   struct k_thread * thread = (struct k_thread *)malloc (sizeof(struct k_thread));
-   if (thread == NULL) {
+   if (thread_cnt >= TOTAL_THREADS) {
       return NULL;
    }
+   struct k_thread * thread = &thread_inst[thread_cnt++];
    const k_tid_t tid = k_thread_create(thread,
                                       (k_thread_stack_t *)(stkSto),
                                        (size_t)stkSize,
@@ -58,14 +69,15 @@ os_thread_t * os_thread_create (
    if (name != NULL) {
       k_thread_name_set(thread, name);
    }
-   LOG_INF("thread created %s, prio %d",name,priority);
    return thread;
 }
 
 os_mutex_t * os_mutex_create (void)
 {
-   struct k_mutex * mutex = (struct k_mutex *)malloc (sizeof(struct k_mutex));
-   CC_ASSERT (mutex != NULL);
+   if(mutex_cnt >= TOTAL_MUTEX) {
+      return NULL;
+   }
+   struct k_mutex * mutex = &mutex_inst[mutex_cnt++];
    k_mutex_init(mutex);
    return (os_mutex_t *)mutex;
 }
@@ -75,7 +87,6 @@ void os_mutex_lock (os_mutex_t * mutex)
    k_mutex_lock(mutex, K_FOREVER);
 }
 
-
 void os_mutex_unlock (os_mutex_t * mutex)
 {
    k_mutex_unlock(mutex);
@@ -83,7 +94,7 @@ void os_mutex_unlock (os_mutex_t * mutex)
 
 void os_mutex_destroy (os_mutex_t * mutex)
 {
-   free(mutex);
+   mutex_cnt--;
 }
 
 void os_usleep (uint32_t us)
@@ -96,37 +107,13 @@ uint32_t os_get_current_time_us (void)
    return k_uptime_get_32()*1000;
 }
 
-os_sem_t * os_sem_create (size_t count)
-{
-   struct k_sem * sem = (struct k_sem *)malloc (sizeof(struct k_sem));
-   CC_ASSERT (sem != NULL);
-   int rc = k_sem_init(sem, count, count);
-   if (rc!=0) {
-      free(sem);
-      return NULL;
-   }
-   return sem;
-}
-
-bool os_sem_wait (os_sem_t * sem, uint32_t time)
-{
-   return k_sem_take(sem, get_timeout(time)) == 0;
-}
-
-void os_sem_signal (os_sem_t * sem)
-{
-   k_sem_give(sem);
-}
-
-void os_sem_destroy (os_sem_t * sem)
-{
-   k_sem_reset(sem);
-   free(sem);
-}
 
 os_event_t * os_event_create (void)
 {
-   struct k_event * event = (struct k_event *)malloc (sizeof(struct k_event));
+   if (evt_cnt >= TOTAL_EVT) {
+      return NULL;
+   }
+   struct k_event * event = &evt_inst[evt_cnt++];
    CC_ASSERT (event != NULL);
    k_event_init(event);
    LOG_INF("os_event_create addr %x\n",event);
@@ -155,18 +142,19 @@ void os_event_clr (os_event_t * event, uint32_t value)
 
 void os_event_destroy (os_event_t * event)
 {
-   free(event);
+   evt_cnt--;
 }
+
 
 os_mbox_t * os_mbox_create (size_t size)
 {
   
    os_mbox_t * mbox;
-   mbox = (os_mbox_t *)malloc (sizeof (*mbox) + size * sizeof (void *));
-   if (mbox == NULL)
-   {
+
+   if (mbox_cnt >= TOTAL_MBOX || size > MAX_MAILBOX_MSGS) {
       return NULL;
    }
+   mbox = &mbox_inst[mbox_cnt++];
    k_mutex_init(&mbox->mutex);
    k_event_init(&mbox->evt);
 
@@ -175,7 +163,6 @@ os_mbox_t * os_mbox_create (size_t size)
    mbox->count = 0;
    mbox->size  = size;
    return mbox;
-
 }
 
 size_t get_mbox_cnt(os_mbox_t * mbox){
@@ -236,7 +223,7 @@ bool os_mbox_post (os_mbox_t * mbox, void * msg, uint32_t time)
 
 void os_mbox_destroy (os_mbox_t * mbox)
 {
-   free (mbox);
+   mbox_cnt--;
 }
 
 static void timer_internal_cb(struct k_timer * timer)
@@ -253,19 +240,15 @@ os_timer_t * os_timer_create (
    void * arg,
    bool oneshot)
 {
-   struct k_timer * handle = (struct k_timer *)malloc (sizeof(struct k_timer));
-   if (handle == NULL) {
+
+   if (timer_cnt > TOTAL_TIMERS) {
       return NULL;
    }
-   os_timer_t * os_timer = (os_timer_t *)malloc (sizeof(os_timer_t));
-   if (os_timer == NULL) {
-      free(handle);
-      return NULL;
-   }
-   k_timer_init(handle, timer_internal_cb, NULL);
-   handle->user_data = os_timer;
+
+   os_timer_t * os_timer = &timer_inst[timer_cnt++];
+   k_timer_init(&os_timer->handle, timer_internal_cb, NULL);
+   os_timer->handle.user_data = os_timer;
    os_timer->one_shot = oneshot;
-   os_timer->handle = handle;
    os_timer->fn = fn;
    os_timer->arg = arg;
    return os_timer;
@@ -278,20 +261,17 @@ void os_timer_set (os_timer_t * timer, uint32_t us)
 
 void os_timer_start (os_timer_t * timer)
 {
+   k_timeout_t period;
    if (timer->one_shot) {
-      k_timer_start(timer->handle, K_USEC(timer->us), K_NO_WAIT);
+      period = K_NO_WAIT;
+
    } else {
-      k_timer_start(timer->handle, K_USEC(timer->us), K_USEC(timer->us));
+      period = K_USEC(timer->us);
    }
+   k_timer_start(&timer->handle, K_USEC(timer->us), period);
 }
 
 void os_timer_stop (os_timer_t * timer)
 {
-   k_timer_stop(timer->handle);
-}
-
-void os_timer_destroy (os_timer_t * timer)
-{
-   free(timer->handle);
-   free(timer);
+   k_timer_stop(&timer->handle);
 }

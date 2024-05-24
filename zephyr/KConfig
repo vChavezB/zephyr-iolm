@@ -57,6 +57,13 @@ config IOLINK_MAX_EVENTS
 	help
 	  Maximum number of io-link events
 
+config TRANSCIEVER_INIT_PRIORITY
+	int "Maxim 14819 init priority"
+	default 90
+	help
+	  Priority of the Maxim 14819 transceiver initialization, should be
+	  greater than CONFIG_SPI_INIT_PRIORITY
+
 choice "$(module)_LOG_LEVEL_CHOICE"
 	prompt "Max compiled-in log level for $(module-str)"
 	default $(module)_LOG_LEVEL_DEFAULT

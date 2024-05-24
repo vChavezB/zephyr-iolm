@@ -1,0 +1,16 @@
+&uart0 {
+	current-speed = <460800>;
+};
+
+&spi2 {
+	status = "okay";
+	cs-gpios = <&gpio0 19 GPIO_ACTIVE_LOW>;
+    max:maxim14819@0 {
+		spi-max-frequency = <8000000>;
+		status = "okay";
+		irq-gpios = <&gpio0 18 GPIO_ACTIVE_LOW>;
+        compatible = "iolm,maxim14819";
+        reg = <0x00>;
+		chip-address = <0x00>;
+    };
+};

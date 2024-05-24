@@ -5,3 +5,5 @@ name: iolink
 build:
   cmake: .
   kconfig: zephyr/KConfig
+  settings:
+    dts_root: .

@@ -1,27 +1,3 @@
-/ {
-
-	iolm_gpios: iolm_gpios {
-		compatible = "gpio-leds";
-		iolm_irq: iolm_irq {
-			status = "okay";
-			gpios = <&gpio0 28 (GPIO_ACTIVE_LOW)>;
-			label = "iolm_irq";
-		};
-		iolm_cs: iolm_cs {
-			status = "okay";
-			gpios = <&gpio1 9 (GPIO_ACTIVE_LOW)>;
-			label = "iolm_cs";
-		};
-	};
-    
-	aliases {
-		iolm-spi= &spi1;
-        iolm-cs = &iolm_cs;
-        iolm-irq = &iolm_irq;
-	};
-
-};
-
 &uart0 {
 	current-speed = <460800>;
 };
@@ -44,4 +20,20 @@
 			low-power-enable;
 		};
 	};
+};
+
+//#include <iolm/maxim14819.h>
+
+&spi1 {
+	status = "okay";
+	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
+    max:maxim14819@0 {
+		spi-max-frequency = <10000000>;
+		status = "okay";
+		irq-gpios = <&gpio0 28 GPIO_ACTIVE_LOW>;
+        compatible = "iolm,maxim14819";
+        reg = <0x00>;
+		chip-address = <0x00>;
+    };
 };
