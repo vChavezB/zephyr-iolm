@@ -31,4 +31,4 @@ jobs:
       - name: Build PoC
         working-directory: /tmp/
         run: |
-          west build $GITHUB_WORKSPACE/samples/ifm_sample_app -b $BOARD --build-dir $GITHUB_WORKSPACE/build
+          west build $GITHUB_WORKSPACE/samples/demo -b $BOARD --build-dir $GITHUB_WORKSPACE/build
