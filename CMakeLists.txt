@@ -36,7 +36,7 @@ if(CONFIG_IOLINK)
     
     #zephyr_library_sources_ifdef(CONFIG_XX xx)
     #target_compile_definitions(${lib_name} PUBLIC MY_DEF="123")
-    target_include_directories(${lib_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dts/bindingS/iolm)
+    target_include_directories(${lib_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dts/bindings/iolm)
     target_compile_options(${lib_name} PRIVATE -Wfatal-errors)
 endif()
     
