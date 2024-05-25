@@ -20,11 +20,17 @@ Zephyr version v3.6.99 commit `34c84eccec0508b16f5001b20fa369f387d856df`
 
 ## Testing
 
-Build and flash the sample located in `samples/demo` and follow the Readme.md
+Build and flash the sample located in `samples/demo` and follow the Readme.md. This 
+can be considered as a Proof-of-concept and will be deprecated in the future.
+
+In addition a sample to read PD In is in progress (`samples/read_pd`). This shall
+demonstrate the use of the API once the first alpha version is released.
 
 ## Current Status
 
-This project is in pre-alpha version and will not provide a stable API/Documentation until the first release.
+This project is in alpha version and will not provide a stable API/Documentation until the first release.
+
+Currently building API to use easily the IOLM Stack.
 
 ## Issues
 
@@ -36,7 +42,7 @@ This happens as it seems that the OD Handler for the event state machine gets st
 
 ### TODOS
 
-- Friendly API to initialize stack 
+- API to use IOLM
 - Documentation (Usage, Caveats)
 
 

@@ -64,7 +64,8 @@ static const uint32_t SMI_PORT_CFG_TIMEOUT = 1000;
 static arg_block_portstatuslist_t port_status[CONFIG_IOLINK_NUM_PORTS];
 
 enum evt_type {
-   ComLost,
+   COMLost,
+   RetryCOM,
    PortStatusChange,
    PortStatusList,
    PortCnf
@@ -143,7 +144,7 @@ static void handle_smi_portevent (uint8_t port_no,diag_entry_t * event)
       break;
    case IOLINK_EVENTCODE_NO_DEV: /* COMLOST */
       LOG_WRN("Port[%u]: COM Lost", port_no);
-      msg_evt.type = ComLost;
+      msg_evt.type = COMLost;
       rc = k_msgq_put(&iol_msgq, &msg_evt, K_MSEC(MSG_TIMEOUT_MS));
       if (rc != 0) {
          LOG_ERR("Failed to queue evt %d", rc);
@@ -311,9 +312,14 @@ static void PD_cb (
    */
 }
 
-struct iol_port {
-    
-};
+
+static void retry_com_cb (struct k_timer * timer)
+{
+   iolm_msgq_evt_t msg_evt;
+   msg_evt.type = RetryCOM;
+   msg_evt.port_no = 
+   k_msgq_put(&iol_msgq, &msg_evt, K_NO_WAIT);
+}
 
 
 struct k_thread hdl_thread; 
@@ -484,7 +490,7 @@ int iolm_init(){
    }
 
    for (uint8_t port_no = 0; port_no < CONFIG_IOLINK_NUM_PORTS; port_no++) {
-      k_timer_init(&tsd_timr[port_no], NULL, NULL);
+      k_timer_init(&tsd_timr[port_no], retry_com_cb, NULL);
    }
 
    for (uint8_t port_no = 0; port_no < CONFIG_IOLINK_NUM_PORTS; port_no++) {
@@ -520,9 +526,22 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
       uint8_t port_idx = evt.port_no-1;
 
       switch(evt.type) {
-         case ComLost:
+         case COMLost:
+            k_timer_stop(&tsd_timr[port_idx]);
+            // Wait 500ms before sending new WURQ
+            k_timer_start(&tsd_timr[port_idx], K_MSEC(500), K_NO_WAIT);
             LOG_WRN("Port[%u]: COM Lost", evt.port_no);
             break;
+         case RetryCOM:
+         {
+            iolink_port_t * port = iolink_get_port(master, evt.port_no);
+            iolink_dl_reset (port);
+            const uint8_t portcfg_ok = iolink_config_port (port_idx, iolink_mode_SDCI);
+            if (portcfg_ok != 1) {
+               LOG_ERR("RetryCOM Port[%d] failed", evt.port_no);
+            }
+            break;
+         }
          case PortStatusChange:
          {
             arg_block_void_t arg_block_void;
@@ -558,25 +577,4 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
             break;
       }
    }
-
-      /*
-      if (((EVENT_RETRY_ESTCOM_0 << i) & event_value) != 0)
-         {
-            if (app_port->app_port_state == IOL_STATE_WU_RETRY_WAIT_TSD)
-            {
-               iolink_dl_reset (iolink_get_port (
-                  iolink_app_master.master,
-                  app_port->portnumber));
-               if (iolink_config_port (app_port, port_mode[i]) != 0)
-               {
-                  LOG_WARNING (
-                     LOG_STATE_ON,
-                     "%s: Failed to config port %lu\n",
-                     __func__,
-                     i + 1);
-               }
-            }
-         }
-
-      */
 }
