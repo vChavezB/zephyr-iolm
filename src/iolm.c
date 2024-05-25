@@ -317,7 +317,7 @@ static void retry_com_cb (struct k_timer * timer)
 {
    iolm_msgq_evt_t msg_evt;
    msg_evt.type = RetryCOM;
-   msg_evt.port_no = 
+   msg_evt.port_no = (uint8_t)timer->user_data;
    k_msgq_put(&iol_msgq, &msg_evt, K_NO_WAIT);
 }
 
@@ -489,8 +489,9 @@ int iolm_init(){
       return -ENODEV;
    }
 
-   for (uint8_t port_no = 0; port_no < CONFIG_IOLINK_NUM_PORTS; port_no++) {
-      k_timer_init(&tsd_timr[port_no], retry_com_cb, NULL);
+   for (uint8_t port_idx = 0; port_idx < CONFIG_IOLINK_NUM_PORTS; port_idx++) {
+      k_timer_init(&tsd_timr[port_idx], retry_com_cb, NULL);
+      tsd_timr[port_idx].user_data = (void*) (port_idx +1);
    }
 
    for (uint8_t port_no = 0; port_no < CONFIG_IOLINK_NUM_PORTS; port_no++) {
