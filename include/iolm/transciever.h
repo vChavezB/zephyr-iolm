@@ -2,6 +2,7 @@
     SPDX-License-Identifier: GPL-3.0-or-later
 */
 #pragma once
+#include <osal.h>
 #include <iolink_pl_hw_drv.h>
 #include <stdint.h>
 

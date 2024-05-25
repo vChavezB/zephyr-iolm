@@ -30,6 +30,8 @@ if(CONFIG_IOLINK)
                             ${STACK_SRC}/iolink_sm.c
                             src/osal/osal.c
                             src/osal/osal_log.c
+                            src/iolm.c
+                            src/utils.c
                             src/transciever.c)
     
     #zephyr_library_sources_ifdef(CONFIG_XX xx)
