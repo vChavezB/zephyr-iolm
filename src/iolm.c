@@ -517,12 +517,10 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
       iolm_msgq_evt_t evt;
 
       k_msgq_get(&iol_msgq, &evt, K_FOREVER);
-
+      uint8_t port_idx = evt.port_no-1;
 
       switch(evt.type) {
          case ComLost:
-            // handle com lost
-            // send event to user
             LOG_WRN("Port[%u]: COM Lost", evt.port_no);
             break;
          case PortStatusChange:
@@ -548,7 +546,7 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
          case PortStatusList:
             // handle port status list
             // Inform user of change in port status
-            const iolink_port_status_info_t status = port_status[evt.port_no].port_status_info;
+            const iolink_port_status_info_t status = port_status[port_idx].port_status_info;
             uint8_t msg_idx = status;
             if (msg_idx >= IOLINK_PORT_STATUS_INFO_POWER_OFF) {
                // Last two status are at the end
@@ -580,23 +578,5 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
             }
          }
 
-      if ((EVT_COMLOST << port) & evt) {
-         k_timer_stop(&tsd_timr[port]);
-         //if (app_port->app_port_state == IOL_STATE_STARTING)
-         {
-            /* Wait 500ms before sending new WURQ
-            k_timer_start(&tsd_timr[port], K_MSEC(500), K_NO_WAIT);
-         }
-         //else if (app_port->app_port_state != IOL_STATE_STOPPING)
-         {
-            /* Send WURQ immediately 
-            //iolink_retry_estcom (NULL, (void *)i);
-            // retry_estcom will trigger EVENT_RETRY_ESTCOM_0
-         }
-         //else // (app_port->app_port_state == IOL_STATE_STOPPING)
-         {
-            //app_port->app_port_state = IOL_STATE_INACTIVE;
-         }
-      }
       */
 }
