@@ -31,14 +31,13 @@ Where:
 ## Expected Output
 
 ```python
-*** Booting Zephyr OS build v3.6.0-3220-g69fa7dc2686e ***
-[00:00:00.366,668] <inf> read_pd: Zephyr IO-Link Master PDIn Sample Application
-[00:00:00.474,731] <inf> read_pd: Port [2]: Status changed
-[00:00:00.503,967] <inf> iol_master: Port [1] status changed to Operate
-[00:00:00.503,967] <inf> read_pd: Port [1]: Status changed
-[00:00:01.026,672] <inf> read_pd: Port [1] PDIn 0000
-[00:00:01.062,683] <inf> iol_master: Port [2] status changed to Operate
-[00:00:01.062,713] <inf> read_pd: Port [2]: Status changed
-[00:00:01.067,932] <inf> read_pd: Port [2] PDIn 0000
-[00:00:02.059,936] <inf> read_pd: Port [1] PDIn 0000
+*** Booting Zephyr OS build ***
+[00:00:00.362,121] <inf> read_pd: Zephyr IO-Link Master PDIn Sample Application
+[00:00:00.499,084] <inf> read_pd: Port [1] Operate: VID 123 DID 123
+[00:00:01.021,820] <inf> read_pd: Port [1] PDIn 0000
+[00:00:01.057,464] <inf> read_pd: Port [2] Operate: VID 123 DID 123
+[00:00:01.062,683] <inf> read_pd: Port [2] PDIn 0000
+[00:00:01.269,561] <inf> read_pd: Port [2] Event type: warning mode: appears code 1234
+[00:00:02.055,084] <inf> read_pd: Port [1] PDIn 0000
+[00:00:02.096,038] <inf> read_pd: Port [2] PDIn 10f0
 ```
