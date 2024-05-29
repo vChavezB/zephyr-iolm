@@ -48,10 +48,10 @@ const uint32_t PDIN_PRINT_TIME_MS = 1000;
 
 void iolm_port_event_cb(uint8_t port, enum iolm_port_evt evt, void *data, void *arg)
 {
+   const uint8_t port_idx = port - 1;
    switch (evt) {
       case IOLM_PORT_PD:
       {
-         const uint8_t port_idx = port - 1;
          const uint32_t current_time = k_uptime_get_32();
          if ( current_time - last_print[port_idx] < CONFIG_PDIN_RATE_MS) {
             return;
@@ -61,13 +61,21 @@ void iolm_port_event_cb(uint8_t port, enum iolm_port_evt evt, void *data, void *
          for (size_t i = 0; i < pd_data->len; i++) {
             sprintf(pdin_data + (i * 2), "%02x", pd_data->data[i]);
          }
-         LOG_INF("Port [%d] PDIn %s", port, pdin_data);
+         //LOG_INF("Port [%d] PDIn %s", port, pdin_data);
          last_print[port_idx] =  current_time;
          break;
       }
       case IOLM_PORT_STATUS:
-         LOG_INF("Port [%d]: Status changed", port);
+      {
+         const arg_block_portstatuslist_t * status_list = (arg_block_portstatuslist_t *)data;
+         if (status_list->port_status_info ==  IOLINK_PORT_STATUS_INFO_OP) {
+            LOG_INF("Port [%d] Operate: VID %x DID %x", status_list->vendorid,status_list->deviceid);
+         }
+         if (status_list->port_status_info ==  IOLINK_PORT_STATUS_INFO_NO_DEV) {
+            LOG_WRN("Port [%d] COM Lost", port);
+         }
          break;
+      }
       case IOLM_PORT_DEV_EVT:
       {
          struct iolm_dev_evt *dev_evt = (struct iolm_dev_evt *)data;

@@ -648,12 +648,11 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
             k_timer_start(&tsd_timr[port_idx], K_MSEC(500), K_NO_WAIT);
             // Only inform of com lost if the device was not connected
             if (port_status[port_idx].port_status_info != IOLINK_PORT_STATUS_INFO_NO_DEV) {
-               LOG_WRN("Port[%u]: COM Lost", evt.port_no);
+               port_status[port_idx].port_status_info = IOLINK_PORT_STATUS_INFO_NO_DEV;
+               if (port_evt_cb != NULL) {
+                  port_evt_cb(evt.port_no,   IOLM_PORT_STATUS, &port_status[port_idx], port_evt_arg);
+               }
             }
-            if (port_evt_cb != NULL) {
-               port_evt_cb(evt.port_no,   IOLM_PORT_STATUS, &port_status[port_idx].port_status_info, port_evt_arg);
-            }
-            port_status[port_idx].port_status_info = IOLINK_PORT_STATUS_INFO_NO_DEV;
             break;
          case RetryCOM:
          {
@@ -695,10 +694,8 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
                msg_idx -= IOLINK_PORT_STATUS_INFO_POWER_OFF;
                msg_idx += (IOLINK_PORT_STATUS_INFO_DO + 1);
             }
-            LOG_INF("Port [%u] status changed to %s",
-                     evt.port_no,  port_status_msg[status]);
             if (port_evt_cb != NULL) {
-               port_evt_cb(evt.port_no,   IOLM_PORT_STATUS, &port_status[port_idx].port_status_info, port_evt_arg);
+               port_evt_cb(evt.port_no,   IOLM_PORT_STATUS, &port_status[port_idx], port_evt_arg);
             }
             break;
       }
