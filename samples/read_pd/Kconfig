@@ -1,0 +1,18 @@
+# Copyright (c) 2024 Victor Chavez
+# SPDX-License-Identifier: GPL-3.0-or-later
+mainmenu "Zephyr IOLM PDIn sample application"
+
+config PDIN_RATE_MS
+	int "VLAN tag for second interface"
+	default 1000
+	help
+	  Rate to print IO-Link Device PDIn data in milliseconds
+
+config CYCLE_TIME_US
+    int "VLAN tag for second interface"
+    default 50000
+    help
+      Cycle time in microseconds for each port
+
+
+source "Kconfig.zephyr"

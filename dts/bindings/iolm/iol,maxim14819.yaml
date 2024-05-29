@@ -1,0 +1,69 @@
+# Copyright (c) 2024 Victor Chavez
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+description: >
+  Binding for the MAXIM14819 IOLM Transciever
+
+compatible: "iolm,maxim14819"
+
+include: [ spi-device.yaml ]
+
+properties:
+  irq-gpios:
+    type: phandle-array
+    required: true
+    description: GPIO pin used for irq
+
+
+  chip-address:
+    description: SPI address of the transceiver
+    type: int
+    required: true
+
+  IntE:
+    description: Initial value of the InterruptEn register
+    type: int
+
+  CQCtrlA:
+    description: Initial value of the CQCtrlA register
+    type: int
+
+  CQCtrlB:
+    description: Initial value of the CQCtrlB register
+    type: int
+
+  LEDCtrl:
+    description: Initial value of the LEDCtrl register
+    type: int
+
+  CQCfgA:
+    description: Initial value of the CQCfgA register
+    type: int
+
+  CQCfgB:
+    description: Initial value of the CQCfgB register
+    type: int
+
+  LPCnfgA:
+    description: Initial value of the LPCnfgA register
+    type: int
+
+  LPCnfgB:
+    description: Initial value of the LPCnfgB register
+    type: int
+
+  IOStCfgA:
+    description: Initial value of the IOStCfgA register
+    type: int
+
+  IOStCfgB:
+    description: Initial value of the IOStCfgB register
+    type: int
+
+  DrvCurrLim:
+    description: Initial value of the DrvCurrLim register
+    type: int
+
+  Clock:
+    description: Initial value of the Clock register
+    type: int

@@ -1,0 +1,34 @@
+# Copyright (c) 2024, Victor Chavez
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Build Samples
+
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  read_pd:
+    runs-on: ubuntu-22.04
+    container: ghcr.io/zephyrproject-rtos/ci:v0.26.2
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+      ZEPHYR_VERSION: v3.6-branch
+      # Board to use with renode
+      BOARD: nrf52833dk_nrf52833
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Initialize
+        run: |
+          cd /tmp/
+          west init
+          west update -o=--depth=1 -n
+
+      - name: Build PoC
+        working-directory: /tmp/
+        run: |
+          west build $GITHUB_WORKSPACE/samples/read_pd -b $BOARD --build-dir $GITHUB_WORKSPACE/build
