@@ -61,7 +61,7 @@ void iolm_port_event_cb(uint8_t port, enum iolm_port_evt evt, void *data, void *
          for (size_t i = 0; i < pd_data->len; i++) {
             sprintf(pdin_data + (i * 2), "%02x", pd_data->data[i]);
          }
-         //LOG_INF("Port [%d] PDIn %s", port, pdin_data);
+         LOG_INF("Port [%d] PDIn %s", port, pdin_data);
          last_print[port_idx] =  current_time;
          break;
       }
@@ -69,7 +69,7 @@ void iolm_port_event_cb(uint8_t port, enum iolm_port_evt evt, void *data, void *
       {
          const arg_block_portstatuslist_t * status_list = (arg_block_portstatuslist_t *)data;
          if (status_list->port_status_info ==  IOLINK_PORT_STATUS_INFO_OP) {
-            LOG_INF("Port [%d] Operate: VID %x DID %x", status_list->vendorid,status_list->deviceid);
+            LOG_INF("Port [%d] Operate: VID %x DID %x", port,status_list->vendorid,status_list->deviceid);
          }
          if (status_list->port_status_info ==  IOLINK_PORT_STATUS_INFO_NO_DEV) {
             LOG_WRN("Port [%d] COM Lost", port);
