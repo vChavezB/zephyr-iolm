@@ -10,15 +10,13 @@ static uint8_t MULT_MASKING = 0x3F; /* Multiplier masking */
 static uint8_t MAX_CYC_MULT=63; /* Max Cycletime multiplier factor*/
 
 /* Cycle time ranges according to IOLink Spec */
-static const uint32_t RangeUs[CYC_TIME_ENCODINGS][2]=
+uint32_t RangeUs[CYC_TIME_ENCODINGS][2]=
 { 
-    {400,6300},
-    {6400,31600},
-    {32000,132800}
+    {400U,6300U}, {6400U,31600U}, {32000U,132800U}
 };
 
-const uint16_t TimeBaseUs[CYC_TIME_ENCODINGS]={100,400,1600};
-const uint16_t TimeOffsetUs[CYC_TIME_ENCODINGS]={0,6400,32000};
+const uint16_t TimeBaseUs[CYC_TIME_ENCODINGS]={100U,400U,1600U};
+const uint16_t TimeOffsetUs[CYC_TIME_ENCODINGS]={0,6400U,32000U};
 
 static inline uint32_t calculate_cyctime(uint8_t mult,uint8_t encode_idx)
 {

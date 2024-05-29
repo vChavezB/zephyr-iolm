@@ -20,11 +20,7 @@ Zephyr version v3.6.99 commit `34c84eccec0508b16f5001b20fa369f387d856df`
 
 ## Testing
 
-Build and flash the sample located in `samples/demo` and follow the Readme.md. This 
-can be considered as a Proof-of-concept and will be deprecated in the future.
-
-In addition a sample to read PD In is in progress (`samples/read_pd`). This shall
-demonstrate the use of the API once the first alpha version is released.
+A sample to test the current API for this project is located in `samples/read_pd`.
 
 ## Current Status
 
@@ -42,8 +38,9 @@ This happens as it seems that the OD Handler for the event state machine gets st
 
 ### TODOS
 
-- API to use IOLM
-- Documentation (Usage, Caveats)
+- Test Port Cfg with Validation (VID,DID, V10,V11)
+- Wrapper for direct access to SMI Requests
+- Test SMI Device Read/Write
 
 
 

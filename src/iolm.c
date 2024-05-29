@@ -7,10 +7,10 @@
 #include <iolm/transciever.h>
 #include <osal.h>
 #include <iolink_main.h>
-#include <iolink.h>
 #include <iolink_dl.h>
 #include <zephyr/sys/__assert.h>
-
+#include <iolm/iolm.h>
+#include <iolm/utils.h>
 
 LOG_MODULE_DECLARE(iol_master, CONFIG_IOLINK_LOG_LEVEL);
 /*
@@ -29,11 +29,7 @@ LOG_MODULE_DECLARE(iol_master, CONFIG_IOLINK_LOG_LEVEL);
 static K_THREAD_STACK_DEFINE(iolm_handler_stack, IOLINK_HANDLER_THREAD_STACK_SIZE); 
 
 static iolink_port_cfg_t port_cfgs[CONFIG_IOLINK_NUM_PORTS];
-static iolink_pl_mode_t init_mode[] =
-{
-   iolink_mode_SDCI,
-   iolink_mode_INACTIVE,
-};
+static iolink_pl_mode_t init_mode = iolink_mode_INACTIVE;
 
 static iolink_m_cfg_t iolink_cfg = {
    .cb_arg                   = NULL,
@@ -60,8 +56,12 @@ static struct k_timer tsd_timr[IOLINK_NUM_PORTS];
 
 static const uint32_t SMI_PORT_CFG_TIMEOUT = 1000; 
 
-
+#define MAX_DEVICE_EVTS 10
 static arg_block_portstatuslist_t port_status[CONFIG_IOLINK_NUM_PORTS];
+static struct iolm_port_cfg user_port_cfg[CONFIG_IOLINK_NUM_PORTS];
+static struct iolm_pd_data port_data[CONFIG_IOLINK_NUM_PORTS];
+static struct iolm_evt_entry device_evts[CONFIG_IOLINK_NUM_PORTS][MAX_DEVICE_EVTS];
+uint8_t pd_buffer[CONFIG_IOLINK_NUM_PORTS][32];
 
 enum evt_type {
    COMLost,
@@ -79,6 +79,9 @@ typedef struct iolm_msgq_evt {
 #define MAX_MSGS 50
 #define MSG_TIMEOUT_MS 100
 K_MSGQ_DEFINE(iol_msgq, sizeof(iolm_msgq_evt_t), MAX_MSGS, 1);
+
+static iolm_port_evt_cb port_evt_cb;
+static void * port_evt_arg;
 
 static void handle_smi_portevent (uint8_t port_no,diag_entry_t * event)
 {
@@ -125,7 +128,6 @@ static void handle_smi_portevent (uint8_t port_no,diag_entry_t * event)
    switch (event->event_code)
    {
    case IOLINK_EVENTCODE_PORT_STATUS_CHANGE:
-      LOG_INF("Port [%u] status changed", port_no);
       msg_evt.type = PortStatusChange;
       rc = k_msgq_put(&iol_msgq, &msg_evt, K_MSEC(MSG_TIMEOUT_MS));
       if (rc != 0) {
@@ -143,7 +145,6 @@ static void handle_smi_portevent (uint8_t port_no,diag_entry_t * event)
       //os_event_set (app_master->app_event, (EVENT_PORTE_0 << port_index));
       break;
    case IOLINK_EVENTCODE_NO_DEV: /* COMLOST */
-      LOG_WRN("Port[%u]: COM Lost", port_no);
       msg_evt.type = COMLost;
       rc = k_msgq_put(&iol_msgq, &msg_evt, K_MSEC(MSG_TIMEOUT_MS));
       if (rc != 0) {
@@ -184,6 +185,7 @@ static void SMI_cnf_cb (void * arg,
    int rc;
    __ASSERT_NO_MSG(arg_block != NULL);
    bool match_found = true;
+   const uint8_t port_idx = portnumber - 1;
    switch (arg_block->id) {
    case IOLINK_ARG_BLOCK_ID_JOB_ERROR:
       //handle_smi_joberror (app_port, ref_arg_block_id, (arg_block_joberror_t *)arg_block);
@@ -193,7 +195,7 @@ static void SMI_cnf_cb (void * arg,
    {
       arg_block_portstatuslist_t * port_status_list =
          (arg_block_portstatuslist_t *)arg_block;
-      uint8_t port_idx = portnumber - 1;
+      
       port_status[port_idx].port_status_info  = port_status_list->port_status_info;
       port_status[port_idx].port_quality_info = port_status_list->port_quality_info;
       port_status[port_idx].revision_id       = port_status_list->revision_id;
@@ -215,10 +217,25 @@ static void SMI_cnf_cb (void * arg,
       handle_smi_portevent (portnumber, &arg_block_portevent->event);
       break;
    case IOLINK_ARG_BLOCK_ID_DEV_EVENT:
-      // SMI_DeviceEvent_ind 
-      //LOG_DEBUG (LOG_STATE_ON, "%s: IOLINK_ARG_BLOCK_ID_DEV_EVENT\n", __func__);
-      //handle_smi_deviceevent (app_port, (arg_block_devevent_t *)arg_block);
+   {
+      arg_block_devevent_t * arg_block_evt = (arg_block_devevent_t *)arg_block;
+
+      for (int evt_idx = 0; evt_idx < arg_block_evt->event_count && evt_idx < MAX_DEVICE_EVTS; evt_idx++) {
+         diag_entry_t * entry = &arg_block_evt->diag_entry[evt_idx];
+         // See Figure A.24
+         device_evts[port_idx][evt_idx].mode =  (iolink_event_type_t) ((entry->event_qualifier >> 6) & 0x3);
+         device_evts[port_idx][evt_idx].type =  (iolink_event_type_t) ((entry->event_qualifier >> 4) & 0x3);
+         device_evts[port_idx][evt_idx].event_code = entry->event_code;
+      }
+      struct iolm_dev_evt dev_evt = {
+         .entry = device_evts[port_idx],
+         .len = arg_block_evt->event_count
+      };
+      if (port_evt_cb != NULL) {
+         port_evt_cb(portnumber, IOLM_PORT_DEV_EVT, &dev_evt, port_evt_arg);
+      }
       break;
+   }
    case IOLINK_ARG_BLOCK_ID_OD_RD:
       // SMI_DeviceRead_cnf 
       //LOG_DEBUG (LOG_STATE_ON, "%s: IOLINK_ARG_BLOCK_ID_OD_RD\n", __func__);
@@ -294,22 +311,17 @@ static void SMI_cnf_cb (void * arg,
    }
 }
 
-
 static void PD_cb (
    uint8_t portnumber,
    void * arg,
    uint8_t data_len,
    const uint8_t * inputdata)
 {
-    /*
-   uint8_t port_index                   = portnumber - 1;
-   iolink_app_master_ctx_t * app_master = (iolink_app_master_ctx_t *)arg;
-   iolink_app_port_ctx_t * app_port = &iolink_app_master.app_port[port_index];
 
-   os_event_set (app_master->app_event, EVENT_PD_0 << port_index);
-   memcpy (app_port->pdin.data, inputdata, data_len);
-   app_port->pdin.data_len = data_len;
-   */
+   const uint8_t port_index   = portnumber - 1;
+   memcpy(pd_buffer[port_index], inputdata, data_len);
+   port_data[port_index].len = data_len;
+   port_evt_cb(portnumber,  IOLM_PORT_PD, &port_data[port_index], port_evt_arg);
 }
 
 
@@ -388,7 +400,7 @@ static uint8_t iolink_config_port_sdci_auto(uint8_t port_no)
       &port_cfg,
       0,
       0,
-      0 /* AFAP (As fast as possible) */, // TODO ADD API to set Cycle time and encode it
+      0 /* AFAP (As fast as possible) */,
       IOLINK_PORTMODE_IOL_AUTO,
       IOLINK_VALIDATION_CHECK_NO);
 
@@ -404,9 +416,41 @@ static uint8_t iolink_config_port_sdci_auto(uint8_t port_no)
    {
       return 1;
    }
-
    return 0;
 }
+
+static uint8_t iolink_config_port_sdci(uint8_t port_no,
+                                       uint16_t vid,
+                                       uint32_t did,
+                                       uint32_t cycletime_us,
+                                       iolink_portmode_t mode,
+                                       iolink_validation_check_t validation)
+{
+   arg_block_portconfiglist_t port_cfg;
+   const uint8_t cycle_time_encoded = cyctime_encode(cycletime_us);
+   iolink_common_config (
+      &port_cfg,
+      vid,
+      did,
+      cycle_time_encoded,
+      mode,
+      validation);
+
+   iolink_error_t err = SMI_PortConfiguration_req (
+      port_no+1,
+      IOLINK_ARG_BLOCK_ID_VOID_BLOCK,
+      sizeof (arg_block_portconfiglist_t),
+      (arg_block_t *)&port_cfg);
+
+
+   if ( (err != IOLINK_ERROR_NONE) ||
+         (wait_smi_cnf ( PortCnf, SMI_PORT_CFG_TIMEOUT) != IOLINK_SMI_ERRORTYPE_NONE))
+   {
+      return 1;
+   }
+   return 0;
+}
+
 
 static uint8_t iolink_config_port_dido (uint8_t portno, bool di)
 {
@@ -437,28 +481,74 @@ static uint8_t iolink_config_port_dido (uint8_t portno, bool di)
    return 0;
 }
 
+
+static uint8_t iolink_config_port_inactive (uint8_t portno)
+{
+   arg_block_portconfiglist_t port_cfg;
+
+   memset (&port_cfg, 0, sizeof (arg_block_portconfiglist_t));
+
+   iolink_common_config (
+      &port_cfg,
+      0,
+      0,
+      0 ,
+      IOLINK_PORTMODE_DEACTIVE,
+      IOLINK_IQ_BEHAVIOR_DI);
+
+   iolink_error_t err = SMI_PortConfiguration_req (
+      portno+1,
+      IOLINK_ARG_BLOCK_ID_VOID_BLOCK,
+      sizeof (arg_block_portconfiglist_t),
+      (arg_block_t *)&port_cfg);
+      
+   if ( (err != IOLINK_ERROR_NONE) ||
+         (wait_smi_cnf (PortCnf, SMI_PORT_CFG_TIMEOUT) != IOLINK_SMI_ERRORTYPE_NONE))
+   {
+      return 1;
+   }
+
+   return 0;
+}
+
 static uint8_t iolink_config_port (uint8_t port_no,
-   iolink_pl_mode_t port_mode)
+   iolink_portmode_t port_mode)
 {
    uint8_t res = 0;
    switch (port_mode)
    {
-   case iolink_mode_SDCI:
-      res = iolink_config_port_sdci_auto (port_no);
-      break;
-   case iolink_mode_DO:
-      res = iolink_config_port_dido (port_no, false);
-      break;
-   case iolink_mode_DI:
+   case IOLINK_PORTMODE_DI_CQ:
       res = iolink_config_port_dido (port_no, true);
       break;
-   case iolink_mode_INACTIVE:
+   case IOLINK_PORTMODE_DO_CQ:
+      res = iolink_config_port_dido (port_no, false);
+      break;
+   case IOLINK_PORTMODE_IOL_MAN:
+   case IOLINK_PORTMODE_IOL_AUTO:
+      res = iolink_config_port_sdci_auto (port_no);
+      break;
+   case IOLINK_PORTMODE_DEACTIVE:
+      res = iolink_config_port_inactive (port_no);
       break;
    }
    return res;
 }
 
-int iolm_init(){
+static uint8_t iolink_set_sdci(uint8_t port_no) {
+   return   iolink_config_port_sdci(port_no,
+                                 user_port_cfg[port_no].vid,
+                                 user_port_cfg[port_no].did,
+                                 user_port_cfg[port_no].cycle_time_us,
+                                 user_port_cfg[port_no].portmode,
+                                 user_port_cfg[port_no].validation);
+}
+
+void iolm_set_port_evt_cb(iolm_port_evt_cb cb, void * arg) {
+   port_evt_cb = cb;
+   port_evt_arg = arg;
+}
+
+int iolm_init(const struct iolm_port_cfg * init_cfg){
    for (int i = 0; i < CONFIG_IOLINK_NUM_PORTS; i++) {
       iolink_hw_drv_t * drv =  get_drv(i);
       if (drv == NULL) {
@@ -467,9 +557,23 @@ int iolm_init(){
       }
       port_cfgs[i].drv = drv;
       port_cfgs[i].name = "dummy"; // not used in stack at all
-      port_cfgs[i].mode = &init_mode[0];
+      port_cfgs[i].mode = &init_mode;
       const uint8_t ch_no = i%TRANSCIEVER_MAX_PORTS;
       port_cfgs[i].arg = (void*)(ch_no);
+      if (init_cfg != NULL) {
+         user_port_cfg[i].portmode = init_cfg[i].portmode;
+         user_port_cfg[i].vid = init_cfg[i].vid;
+         user_port_cfg[i].did = init_cfg[i].did;
+         user_port_cfg[i].cycle_time_us = init_cfg[i].cycle_time_us;
+         user_port_cfg[i].validation = init_cfg[i].validation;
+      } else {
+         user_port_cfg[i].portmode = IOLINK_PORTMODE_IOL_AUTO;
+         user_port_cfg[i].vid = 0;
+         user_port_cfg[i].did = 0;
+         user_port_cfg[i].cycle_time_us = 0; // As fast as possible
+         user_port_cfg[i].validation = IOLINK_VALIDATION_CHECK_NO;
+      }
+      port_data[i].data = pd_buffer[i];
    }
 
    iolink_cfg.port_cnt  = CONFIG_IOLINK_NUM_PORTS;
@@ -495,13 +599,24 @@ int iolm_init(){
    }
 
    for (uint8_t port_no = 0; port_no < CONFIG_IOLINK_NUM_PORTS; port_no++) {
-      iolink_port_t * port = iolink_get_port (master, port_no);
+      iolink_port_t * port = iolink_get_port (master, port_no+1);
       // Note priority and stack are statically defined in Kconfig
       // see CONFIG_IOLINK_DL_STACK_SIZE, 
       iolink_dl_instantiate (port,0,0);
 
-      // TODO Add API for initial config of port
-      uint8_t port_res = iolink_config_port (port_no, iolink_mode_SDCI);
+      uint8_t port_res;
+      switch(user_port_cfg[port_no].portmode) {
+         case IOLINK_PORTMODE_DEACTIVE:
+         case IOLINK_PORTMODE_DI_CQ:
+         case IOLINK_PORTMODE_DO_CQ:
+            port_res = iolink_config_port(port_no, user_port_cfg[port_no].portmode);
+            break;
+         case IOLINK_PORTMODE_IOL_MAN:
+         case IOLINK_PORTMODE_IOL_AUTO:
+            port_res = iolink_set_sdci(port_no);
+            break;
+         
+      }
       if (port_res != 0) {
          LOG_ERR("Port %d config failed", port_no);
          return -EIO;
@@ -531,14 +646,21 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
             k_timer_stop(&tsd_timr[port_idx]);
             // Wait 500ms before sending new WURQ
             k_timer_start(&tsd_timr[port_idx], K_MSEC(500), K_NO_WAIT);
-            LOG_WRN("Port[%u]: COM Lost", evt.port_no);
+            // Only inform of com lost if the device was not connected
+            if (port_status[port_idx].port_status_info != IOLINK_PORT_STATUS_INFO_NO_DEV) {
+               LOG_WRN("Port[%u]: COM Lost", evt.port_no);
+            }
+            if (port_evt_cb != NULL) {
+               port_evt_cb(evt.port_no,   IOLM_PORT_STATUS, &port_status[port_idx].port_status_info, port_evt_arg);
+            }
+            port_status[port_idx].port_status_info = IOLINK_PORT_STATUS_INFO_NO_DEV;
             break;
          case RetryCOM:
          {
             iolink_port_t * port = iolink_get_port(master, evt.port_no);
             iolink_dl_reset (port);
-            const uint8_t portcfg_ok = iolink_config_port (port_idx, iolink_mode_SDCI);
-            if (portcfg_ok != 1) {
+            const uint8_t portcfg_ok = iolink_set_sdci(port_idx);
+            if (portcfg_ok != 0) {
                LOG_ERR("RetryCOM Port[%d] failed", evt.port_no);
             }
             break;
@@ -575,6 +697,9 @@ void iolm_hdl_thread(void * p1, void * p2, void * p3) {
             }
             LOG_INF("Port [%u] status changed to %s",
                      evt.port_no,  port_status_msg[status]);
+            if (port_evt_cb != NULL) {
+               port_evt_cb(evt.port_no,   IOLM_PORT_STATUS, &port_status[port_idx].port_status_info, port_evt_arg);
+            }
             break;
       }
    }

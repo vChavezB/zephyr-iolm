@@ -116,7 +116,6 @@ os_event_t * os_event_create (void)
    struct k_event * event = &evt_inst[evt_cnt++];
    CC_ASSERT (event != NULL);
    k_event_init(event);
-   LOG_INF("os_event_create addr %x\n",event);
    return event;
 }
 
