@@ -15,8 +15,8 @@ jobs:
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
     strategy:
-    matrix:
-      board: ["esp32","nrf52833dk_nrf52833"]
+      matrix:
+        board: ["esp32","nrf52833dk_nrf52833"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
