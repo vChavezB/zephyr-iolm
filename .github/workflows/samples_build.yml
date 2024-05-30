@@ -14,9 +14,9 @@ jobs:
     container: ghcr.io/zephyrproject-rtos/ci:v0.26.2
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
-      ZEPHYR_VERSION: v3.6-branch
-      # Board to use with renode
-      BOARD: nrf52833dk_nrf52833
+    strategy:
+    matrix:
+      board: ["esp32","nrf52833dk_nrf52833"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
           west init
           west update -o=--depth=1 -n
 
-      - name: Build PoC
+      - name: Build
         working-directory: /tmp/
         run: |
-          west build $GITHUB_WORKSPACE/samples/read_pd -b $BOARD --build-dir $GITHUB_WORKSPACE/build
+          west build $GITHUB_WORKSPACE/samples/read_pd -b ${{ matrix.board }} --build-dir $GITHUB_WORKSPACE/build
