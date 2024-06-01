@@ -240,7 +240,7 @@ os_timer_t * os_timer_create (
    bool oneshot)
 {
 
-   if (timer_cnt > TOTAL_TIMERS) {
+   if (timer_cnt >= TOTAL_TIMERS) {
       return NULL;
    }
 
