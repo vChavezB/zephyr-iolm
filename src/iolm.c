@@ -391,34 +391,6 @@ iolink_smi_errortypes_t wait_smi_cnf (enum evt_type wait_evt, uint32_t ms)
    return errortype;
 }
 
-
-static uint8_t iolink_config_port_sdci_auto(uint8_t port_no)
-{
-   arg_block_portconfiglist_t port_cfg;
-
-   iolink_common_config (
-      &port_cfg,
-      0,
-      0,
-      0 /* AFAP (As fast as possible) */,
-      IOLINK_PORTMODE_IOL_AUTO,
-      IOLINK_VALIDATION_CHECK_NO);
-
-   iolink_error_t err = SMI_PortConfiguration_req (
-      port_no+1,
-      IOLINK_ARG_BLOCK_ID_VOID_BLOCK,
-      sizeof (arg_block_portconfiglist_t),
-      (arg_block_t *)&port_cfg);
-
-
-   if ( (err != IOLINK_ERROR_NONE) ||
-         (wait_smi_cnf ( PortCnf, SMI_PORT_CFG_TIMEOUT) != IOLINK_SMI_ERRORTYPE_NONE))
-   {
-      return 1;
-   }
-   return 0;
-}
-
 static uint8_t iolink_config_port_sdci(uint8_t port_no,
                                        uint16_t vid,
                                        uint32_t did,
@@ -511,6 +483,16 @@ static uint8_t iolink_config_port_inactive (uint8_t portno)
    return 0;
 }
 
+
+static uint8_t iolink_set_sdci(uint8_t port_no) {
+   return   iolink_config_port_sdci(port_no,
+                                 user_port_cfg[port_no].vid,
+                                 user_port_cfg[port_no].did,
+                                 user_port_cfg[port_no].cycle_time_us,
+                                 user_port_cfg[port_no].portmode,
+                                 user_port_cfg[port_no].validation);
+}
+
 static uint8_t iolink_config_port (uint8_t port_no,
    iolink_portmode_t port_mode)
 {
@@ -525,22 +507,13 @@ static uint8_t iolink_config_port (uint8_t port_no,
       break;
    case IOLINK_PORTMODE_IOL_MAN:
    case IOLINK_PORTMODE_IOL_AUTO:
-      res = iolink_config_port_sdci_auto (port_no);
+      res = iolink_set_sdci (port_no);
       break;
    case IOLINK_PORTMODE_DEACTIVE:
       res = iolink_config_port_inactive (port_no);
       break;
    }
    return res;
-}
-
-static uint8_t iolink_set_sdci(uint8_t port_no) {
-   return   iolink_config_port_sdci(port_no,
-                                 user_port_cfg[port_no].vid,
-                                 user_port_cfg[port_no].did,
-                                 user_port_cfg[port_no].cycle_time_us,
-                                 user_port_cfg[port_no].portmode,
-                                 user_port_cfg[port_no].validation);
 }
 
 void iolm_set_port_evt_cb(iolm_port_evt_cb cb, void * arg) {
@@ -605,18 +578,7 @@ int iolm_init(const struct iolm_port_cfg * init_cfg){
       iolink_dl_instantiate (port,0,0);
 
       uint8_t port_res;
-      switch(user_port_cfg[port_no].portmode) {
-         case IOLINK_PORTMODE_DEACTIVE:
-         case IOLINK_PORTMODE_DI_CQ:
-         case IOLINK_PORTMODE_DO_CQ:
-            port_res = iolink_config_port(port_no, user_port_cfg[port_no].portmode);
-            break;
-         case IOLINK_PORTMODE_IOL_MAN:
-         case IOLINK_PORTMODE_IOL_AUTO:
-            port_res = iolink_set_sdci(port_no);
-            break;
-         
-      }
+      port_res = iolink_config_port(port_no, user_port_cfg[port_no].portmode);
       if (port_res != 0) {
          LOG_ERR("Port %d config failed", port_no);
          return -EIO;
