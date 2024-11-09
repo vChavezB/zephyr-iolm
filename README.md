@@ -13,10 +13,11 @@ is also licensed as GPLv3.0.
 
 ## Tested boards
 
+Zephyr version v3.7.0:
+
 - ESP32 Devkit C
 - NRF52833 DK
-
-Zephyr version v3.6.99 commit `34c84eccec0508b16f5001b20fa369f387d856df`
+- NRF5340
 
 ## Testing
 
@@ -38,7 +39,6 @@ This happens as it seems that the OD Handler for the event state machine gets st
 
 ### TODOS
 
-- Test Port Cfg with Validation (VID,DID, V10,V11)
 - Wrapper for direct access to SMI Requests
 - Test SMI Device Read/Write
 
