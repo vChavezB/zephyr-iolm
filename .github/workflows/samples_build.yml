@@ -31,10 +31,10 @@ jobs:
         with:
           submodules: true
 
-      - name: Initialize Zephyr ${{ matrix.zephyr_version }}
+      - name: Initialize Zephyr v${{ matrix.zephyr_version }}
         run: |
           cd /tmp/
-          west init --mr=${{ matrix.zephyr_version }}
+          west init --mr=v${{ matrix.zephyr_version }}
           west update -o=--depth=1 -n
 
       - name: Build read_pd for ${{ matrix.board }} on Zephyr ${{ matrix.zephyr_version }}
