@@ -1,34 +1,46 @@
-# Copyright (c) 2024, Victor Chavez
+# Copyright (c) 2024-2025, Victor Chavez
 # SPDX-License-Identifier: GPL-3.0-or-later
-
-name: Build Samples
+name: Build Zephyr Samples
 
 on:
   push:
   pull_request:
 
 jobs:
-
-  read_pd:
+  build-read-pd:
     runs-on: ubuntu-22.04
-    container: ghcr.io/zephyrproject-rtos/ci:v0.26.2
+    container: ghcr.io/zephyrproject-rtos/ci:v0.28.2
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
+
     strategy:
       matrix:
-        board: ["esp32","nrf52833dk_nrf52833"]
+        include:
+          - zephyr_version: "3.7.0"
+            board: "esp32"
+          - zephyr_version: "3.7.0"
+            board: "nrf52833dk_nrf52833"
+          - zephyr_version: "4.2.0"
+            board: "esp32c3_devkitc"
+          - zephyr_version: "4.0.0"
+            board: "nrf52833dk"
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Initialize
+
+      - name: Initialize Zephyr ${{ matrix.zephyr_version }}
         run: |
           cd /tmp/
-          west init
+          west init --mr=${{ matrix.zephyr_version }}
           west update -o=--depth=1 -n
 
-      - name: Build
+      - name: Build read_pd for ${{ matrix.board }} on Zephyr ${{ matrix.zephyr_version }}
         working-directory: /tmp/
         run: |
-          west build $GITHUB_WORKSPACE/samples/read_pd -b ${{ matrix.board }} --build-dir $GITHUB_WORKSPACE/build
+          build_dir=$GITHUB_WORKSPACE/build/${{ matrix.zephyr_version }}/${{ matrix.board }}
+          west build $GITHUB_WORKSPACE/samples/read_pd \
+            -b ${{ matrix.board }} \
+            --build-dir $build_dir
