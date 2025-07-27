@@ -23,7 +23,7 @@ jobs:
           - zephyr_version: "4.2.0"
             board: "esp32c3_devkitc"
           - zephyr_version: "4.2.0"
-            board: "nrf52833dk"
+            board: "nrf52833dk/nrf52833"
 
     steps:
       - name: Checkout repository
