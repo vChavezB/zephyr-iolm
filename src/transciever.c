@@ -137,7 +137,7 @@ DT_INST_FOREACH_STATUS_OKAY(MAXIM14819_DEFINE)
 
 
 static const struct device *maxim14819_devices[] = {
-    DT_INST_FOREACH_STATUS_OKAY(DEVICE_DT_INST_GET),
+    DT_INST_FOREACH_STATUS_OKAY(DEVICE_DT_INST_GET)
 };
 
 iolink_hw_drv_t * get_drv(uint8_t port){
