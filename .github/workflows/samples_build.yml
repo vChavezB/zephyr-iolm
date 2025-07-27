@@ -22,7 +22,7 @@ jobs:
             board: "nrf52833dk_nrf52833"
           - zephyr_version: "4.2.0"
             board: "esp32c3_devkitc"
-          - zephyr_version: "4.0.0"
+          - zephyr_version: "4.2.0"
             board: "nrf52833dk"
 
     steps:
