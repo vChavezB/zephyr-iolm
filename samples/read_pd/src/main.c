@@ -4,6 +4,7 @@
 #include <iolm/iolm.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <stdio.h>
 
 LOG_MODULE_REGISTER(read_pd,CONFIG_LOG_DEFAULT_LEVEL);
 
